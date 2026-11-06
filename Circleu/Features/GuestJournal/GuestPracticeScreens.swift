@@ -34,7 +34,8 @@ struct GuestPracticeHomeView: View {
             .navigationTitle("Practice")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { GuestBrandToolbar(journal: journal, practice: practice) }
-            .searchable(text: $query, prompt: "Search messages")
+            .modifier(GuestPracticeSearch(query: $query, isAvailable: !isEmpty))
+            .onChange(of: isEmpty) { if isEmpty { query = "" } } // No hidden search left filtering later messages.
             .onChange(of: practice.dataGeneration) { path = [] } // Delete all closes open messages.
             .navigationDestination(for: GuestPracticeRoute.self) { route in
                 GuestPracticeRouteView(route: route, practice: practice, journal: journal)
@@ -48,31 +49,13 @@ struct GuestPracticeHomeView: View {
         return false
     }
 
-    /// The one primary action, as a picture card.
+    /// The same top as the other tabs, then the one primary action.
     private var startCard: some View {
-        Button { path.append(.new(sourceEntryID: nil)) } label: {
-            VStack(spacing: 0) {
-                if !typeSize.isAccessibilitySize {
-                    GuestScene(.practiceStudio)
-                }
-                HStack(spacing: 8) {
-                    Text("Practice a message")
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 8)
-                    Image(systemName: "arrow.right").accessibilityHidden(true)
-                }
-                .font(GuestBrand.font(.headline, .semibold)).foregroundStyle(.white)
-                .padding(.horizontal, 20).padding(.vertical, 16)
-                .frame(maxWidth: .infinity, minHeight: 54)
-                .background(GuestBrand.blue)
-            }
-            .frame(maxWidth: .infinity)
-            .background(GuestBrand.wash)
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .contentShape(RoundedRectangle(cornerRadius: 24))
+        VStack(alignment: .leading, spacing: 14) {
+            GuestPageTop(heading: "What do you want to say?", scene: .practiceStudio)
+            Button("Practice a message") { path.append(.new(sourceEntryID: nil)) }
+                .buttonStyle(GuestBrandButtonStyle())
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Practice a message")
     }
 
     private var emptyState: some View {
@@ -943,5 +926,19 @@ struct GuestPracticeMessageView: View {
 struct GuestTrailingIconLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack { configuration.title; Spacer(); configuration.icon }
+    }
+}
+
+/// Same search bar as Journal, and like Journal it only appears when there is something to find.
+private struct GuestPracticeSearch: ViewModifier {
+    @Binding var query: String
+    let isAvailable: Bool
+
+    func body(content: Content) -> some View {
+        if isAvailable {
+            content.searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search messages")
+        } else {
+            content
+        }
     }
 }

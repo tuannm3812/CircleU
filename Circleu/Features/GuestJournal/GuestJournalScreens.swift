@@ -74,6 +74,8 @@ struct GuestTodayView: View {
             // Writing and voice share the same composer; neither requires an extra route.
             GuestWriteView(journal: journal, dictationEngine: makeDictationEngine(),
                            heading: "What’s on your mind?", onSaved: onSaved)
+                .navigationTitle("Today")
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar { GuestBrandToolbar(journal: journal, practice: practice) }
         }
     }
@@ -103,17 +105,7 @@ struct GuestWriteView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text(heading)
-                    .font(GuestBrand.font(size: 24, relativeTo: .title2, weight: .semibold))
-                    .accessibilityAddTraits(.isHeader)
-                if !typeSize.isAccessibilitySize && !focused {
-                    Color.clear.aspectRatio(2, contentMode: .fit)
-                        .overlay {
-                            Image(GuestSceneArt.today(listening: dictation.isActive).asset)
-                                .resizable().scaledToFill()
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: 24)).accessibilityHidden(true)
-                }
+                GuestPageTop(heading: heading, scene: .today(listening: dictation.isActive), showsScene: !focused)
                 VStack(alignment: .leading, spacing: 0) {
                     if let question = journal.selectedQuestion {
                         HStack(alignment: .top, spacing: 8) {
@@ -299,12 +291,23 @@ struct GuestJournalListView: View {
                     }
                     .padding(24)
                 case .loaded(let entries) where entries.isEmpty:
-                    GuestSceneMessage(scene: .journalDesk, text: "Nothing saved yet.")
-                        .padding(24)
+                    VStack(alignment: .leading, spacing: 18) {
+                        GuestPageTop(heading: "Your words so far", scene: .journalDesk)
+                        Text("Nothing saved yet.").foregroundStyle(GuestBrand.muted)
+                            .frame(maxWidth: .infinity)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(24)
                 case .loaded(let all):
                     let byDay = selectedDay.map { GuestCalendarModel.entries(on: $0, in: all) } ?? all
                     let entries = byDay.filter { GuestSearch.matches($0, query) }
                     List {
+                        // Scrolls away with the list, and steps aside while finding something.
+                        if !showsCalendar && selectedDay == nil && query.isEmpty {
+                            GuestPageTop(heading: "Your words so far", scene: .journalDesk)
+                                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                                .listRowSeparator(.hidden).listRowBackground(Color.clear)
+                        }
                         if showsCalendar {
                             GuestCalendarView(entries: all, selectedDay: $selectedDay)
                                 .listRowBackground(Color.clear)
@@ -351,6 +354,9 @@ struct GuestJournalListView: View {
                         }
                     }
                     .scrollContentBackground(.hidden)
+                    .contentMargins(.horizontal, 24, for: .scrollContent)
+                    .contentMargins(.top, 0, for: .scrollContent)
+                    .listSectionSpacing(8)
                     .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search your journal")
                 }
             }
