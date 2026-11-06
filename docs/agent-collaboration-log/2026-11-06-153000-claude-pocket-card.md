@@ -20,3 +20,15 @@ Tones match Practice (Soft, Balanced, Firm), not a separate style set. Steadying
 ## Verification
 
 `GuestPocketCardTests` (6) with the copy lint pass; `GuestPocketCardUITests` passes and its two captures were inspected (Balanced with the preselected line; Firm with an own line). Full suites and the Codex pass are in the PR. Not verified: the share sheet and Save Image on a physical phone.
+
+## Review fixes (same day)
+
+Codex's first pass found three blockers; all fixed before merge, and its second pass found none.
+
+- Long text could be clipped: wording type now steps down by length (24, 20, 17, 14 pt) and may shrink further; the goal and steadying line have line limits. New unit test `testLongWordingGetsSmallerTypeAndStillRenders`.
+- The own-line field took more than 60 characters while the card used 60: the field now stops at 60 and shows the count.
+- "Nothing is uploaded" sat beside a share action: the note now reads "Made on this iPhone from your own words. Sharing sends it where you choose."
+- The share image is drawn on demand (`GuestPocketCardExport`, `Transferable`) instead of on every view update.
+
+Not covered: no automated check that long text is visually unclipped, and the system share sheet itself is not exercised by a test.
+

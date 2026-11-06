@@ -1,13 +1,15 @@
 import Combine
+import CoreTransferable
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 /// A card to glance at before the real conversation. Everything on it is something the person
 /// wrote or chose: their wording, what they want to happen (when they said), and one steadying
 /// line. Nothing is generated about them, and nothing leaves the phone unless they share it.
-struct GuestPocketCard: Equatable {
+struct GuestPocketCard: Equatable, Sendable {
     /// The same three tones as Practice, so the card follows the tone already chosen there.
-    enum Tone: String, CaseIterable, Identifiable {
+    enum Tone: String, CaseIterable, Identifiable, Sendable {
         case soft = "Soft", balanced = "Balanced", firm = "Firm"
         var id: String { rawValue }
 
@@ -38,6 +40,33 @@ struct GuestPocketCard: Equatable {
     ]
     /// A 4:5 image, the shape Photos and messages show without cropping.
     static let exportSize = CGSize(width: 1080, height: 1350)
+
+    /// Long wording gets smaller type, so a full practised message still fits the card. Past the
+    /// last tier the text shrinks further and, as a last resort, ends in an ellipsis: never cut
+    /// off without a sign.
+    static func wordingPointSize(for wording: String) -> CGFloat {
+        switch wording.count {
+        case ...80: 24
+        case ...160: 20
+        case ...260: 17
+        default: 14
+        }
+    }
+}
+
+/// The image handed to the share sheet, drawn only when the person actually shares or saves.
+struct GuestPocketCardExport: Transferable {
+    let card: GuestPocketCard
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: .png) { export in
+            guard let data = await MainActor.run(body: { GuestPocketCardModel.renderImage(of: export.card)?.pngData() }) else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+            return data
+        }
+        .suggestedFileName("CircleU pocket card")
+    }
 }
 
 @MainActor
@@ -46,8 +75,15 @@ final class GuestPocketCardModel: ObservableObject {
     private let goal: String
     @Published var tone: GuestPocketCard.Tone
     @Published private(set) var chosenLine = GuestPocketCard.steadyingLines[0]
-    /// "Write my own": used in place of the chosen line while it has words.
-    @Published var ownLine = ""
+    /// "Write my own": used in place of the chosen line while it has words. Capped as it is
+    /// typed, so what the field shows is exactly what the card says.
+    @Published var ownLine = "" {
+        didSet {
+            if ownLine.count > GuestPocketCard.steadyingLineLimit {
+                ownLine = String(ownLine.prefix(GuestPocketCard.steadyingLineLimit))
+            }
+        }
+    }
 
     init(wording: String, goal: String, tone: String) {
         self.wording = wording.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -61,13 +97,15 @@ final class GuestPocketCardModel: ObservableObject {
     }
 
     var card: GuestPocketCard {
-        let own = String(ownLine.trimmingCharacters(in: .whitespacesAndNewlines).prefix(GuestPocketCard.steadyingLineLimit))
+        let own = ownLine.trimmingCharacters(in: .whitespacesAndNewlines)
         return GuestPocketCard(wording: wording, want: goal.isEmpty ? nil : goal,
                                steadyingLine: own.isEmpty ? chosenLine : own, tone: tone)
     }
 
+    func renderImage() -> UIImage? { Self.renderImage(of: card) }
+
     /// The card as an image for the share sheet (Save Image, Messages, AirDrop).
-    func renderImage() -> UIImage? {
+    static func renderImage(of card: GuestPocketCard) -> UIImage? {
         let size = GuestPocketCard.exportSize
         let renderer = ImageRenderer(content: GuestPocketCardView(card: card, scale: size.width / 360)
             .frame(width: size.width, height: size.height))
@@ -91,18 +129,19 @@ struct GuestPocketCardView: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 12 * scale) {
                 Text("Before I talk").font(font(12, .bold)).tracking(1 * scale).textCase(.uppercase).opacity(0.85)
-                Text(card.wording).font(font(24, .bold)).fixedSize(horizontal: false, vertical: true)
-                    .minimumScaleFactor(0.6)
+                // Sized by length, then allowed to shrink; it takes the room before anything else does.
+                Text(card.wording).font(font(GuestPocketCard.wordingPointSize(for: card.wording), .bold))
+                    .minimumScaleFactor(0.5).layoutPriority(2)
                 if let want = card.want {
                     VStack(alignment: .leading, spacing: 3 * scale) {
                         Text("What I want").font(font(11, .bold)).tracking(0.8 * scale).textCase(.uppercase).opacity(0.8)
-                        Text(want).font(font(15, .regular)).fixedSize(horizontal: false, vertical: true)
+                        Text(want).font(font(15, .regular)).lineLimit(2).minimumScaleFactor(0.8)
                     }
                     .padding(.trailing, 110 * scale)
                 }
                 Spacer(minLength: 8 * scale)
-                Text(card.steadyingLine).font(font(16, .semibold)).fixedSize(horizontal: false, vertical: true)
-                    .padding(.trailing, 150 * scale)
+                Text(card.steadyingLine).font(font(16, .semibold)).lineLimit(3).minimumScaleFactor(0.7)
+                    .layoutPriority(1).padding(.trailing, 150 * scale)
                 HStack(spacing: 6 * scale) {
                     Image("GuestIconLogo").resizable().scaledToFit().frame(width: 18 * scale, height: 18 * scale)
                     Text("CircleU").font(font(12, .semibold)).opacity(0.85)
@@ -185,7 +224,11 @@ struct GuestPocketCardSheet: View {
                         .lineLimit(1...2).focused($writingOwn)
                         .padding(14).background(.white, in: RoundedRectangle(cornerRadius: 14))
                         .accessibilityLabel("Write my own")
-                    Text("Only words you wrote or chose. Nothing is uploaded.")
+                    Text("\(model.ownLine.count) of \(GuestPocketCard.steadyingLineLimit)")
+                        .font(GuestBrand.font(.caption)).foregroundStyle(GuestBrand.muted)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .accessibilityLabel("\(model.ownLine.count) of \(GuestPocketCard.steadyingLineLimit) characters")
+                    Text("Made on this iPhone from your own words. Sharing sends it where you choose.")
                         .font(GuestBrand.font(.footnote)).foregroundStyle(GuestBrand.muted)
                 }
                 .padding(24)
@@ -216,16 +259,12 @@ struct GuestPocketCardSheet: View {
         }
     }
 
-    /// The system share sheet: Save Image, Messages, AirDrop. The image is made when it's asked for.
-    @ViewBuilder private var share: some View {
-        if let image = model.renderImage() {
-            ShareLink(item: Image(uiImage: image), preview: SharePreview("Pocket card", image: Image(uiImage: image))) {
-                Text("Share or save")
-            }
-            .buttonStyle(GuestBrandButtonStyle())
-        } else {
-            Text("Couldn’t make the card. Close and try again.")
-                .font(GuestBrand.font(.footnote)).foregroundStyle(GuestBrand.ink)
+    /// The system share sheet: Save Image, Messages, AirDrop. The image is drawn only when asked for.
+    private var share: some View {
+        ShareLink(item: GuestPocketCardExport(card: model.card),
+                  preview: SharePreview("Pocket card", image: Image("GuestIconLogo"))) {
+            Text("Share or save")
         }
+        .buttonStyle(GuestBrandButtonStyle())
     }
 }

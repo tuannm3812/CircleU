@@ -36,7 +36,8 @@ final class GuestPocketCardTests: XCTestCase {
         model.ownLine = "   I have thought about this.   "
         XCTAssertEqual(model.card.steadyingLine, "I have thought about this.", "my own line wins when it has words")
         model.ownLine = String(repeating: "a", count: 200)
-        XCTAssertEqual(model.card.steadyingLine.count, GuestPocketCard.steadyingLineLimit)
+        XCTAssertEqual(model.ownLine.count, GuestPocketCard.steadyingLineLimit, "capped in the field itself, not only on the card")
+        XCTAssertEqual(model.card.steadyingLine, model.ownLine, "the card says exactly what the field shows")
         model.ownLine = "   "
         XCTAssertEqual(model.card.steadyingLine, GuestPocketCard.steadyingLines[2], "clearing it returns to my choice")
     }
@@ -51,5 +52,17 @@ final class GuestPocketCardTests: XCTestCase {
         let image = try XCTUnwrap(model.renderImage())
         XCTAssertEqual(image.size.width * image.scale, GuestPocketCard.exportSize.width, accuracy: 1)
         XCTAssertEqual(image.size.height * image.scale, GuestPocketCard.exportSize.height, accuracy: 1)
+    }
+
+    /// A full practised message (the engine allows 60 words) still fits: type steps down by length.
+    func testLongWordingGetsSmallerTypeAndStillRenders() throws {
+        XCTAssertEqual(GuestPocketCard.wordingPointSize(for: String(repeating: "a", count: 80)), 24)
+        XCTAssertEqual(GuestPocketCard.wordingPointSize(for: String(repeating: "a", count: 81)), 20)
+        XCTAssertEqual(GuestPocketCard.wordingPointSize(for: String(repeating: "a", count: 200)), 17)
+        XCTAssertEqual(GuestPocketCard.wordingPointSize(for: String(repeating: "a", count: 400)), 14)
+        let long = Array(repeating: "I would like us to agree on this together", count: 9).joined(separator: ". ")
+        let model = GuestPocketCardModel(wording: long, goal: String(repeating: "A fair split for everyone. ", count: 8), tone: "Firm")
+        let image = try XCTUnwrap(model.renderImage(), "a very long card still draws")
+        XCTAssertEqual(image.size.height * image.scale, GuestPocketCard.exportSize.height, accuracy: 1, "and keeps its size")
     }
 }

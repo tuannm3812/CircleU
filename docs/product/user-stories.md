@@ -320,8 +320,8 @@ Screen: Practice → saved message → "Make a pocket card". States: Soft, Balan
 | # | Given / When / Then | Test |
 | --- | --- | --- |
 | P10.1 | Given a saved message, when I make a card, then it shows my saved wording, my goal as "What I want" when I gave one, and the tone I chose in Practice. Nothing is generated. | Unit `GuestPocketCardTests.testCardUsesMyWordingMyGoalAndTheToneIChoseInPractice`, `testWantIsLeftOffWhenNoGoalWasGiven`; UI `GuestPocketCardUITests.testMakeAPocketCardFromASavedMessage` |
-| P10.2 | Given the card, when I pick one of six steadying lines or write my own (60 characters), then the card shows it; clearing my own returns to my pick. | Unit `testSixSteadyingLinesEachShortAndDistinct`, `testMyOwnLineReplacesTheChoiceAndIsTrimmedAndCapped`; same UI test |
-| P10.3 | Given the card, when I choose Share or save, then the system share sheet receives a 1080 × 1350 image; nothing is uploaded by the app, and closing leaves my saved message unchanged. | Unit `testCardRendersToAShareableImage`; UI checks the action exists and that Close returns to the saved message. The share sheet itself and Save Image on a phone are not automated |
+| P10.2 | Given the card, when I pick one of six steadying lines or write my own (the field stops at 60 characters and shows the count), then the card shows exactly it; clearing my own returns to my pick. | Unit `testSixSteadyingLinesEachShortAndDistinct`, `testMyOwnLineReplacesTheChoiceAndIsTrimmedAndCapped`; same UI test |
+| P10.3 | Given the card, when I choose Share or save, then the system share sheet receives a 1080 × 1350 image; the image is drawn on this iPhone only when I share, the note says sharing sends it where I choose, and closing leaves my saved message unchanged. | Unit `testCardRendersToAShareableImage`; UI checks the action exists and that Close returns to the saved message. The share sheet itself and Save Image on a phone are not automated |
 | P10.4 | Given each tone, when the card draws, then it has its own bundled Pingu. | Unit `testEveryToneHasItsOwnBundledPingu`. Dedicated card illustrations are a later asset batch |
 
 ## 5. Settings
