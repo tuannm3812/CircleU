@@ -265,6 +265,7 @@ struct GuestPracticeMessageView: View {
     @State private var showGoal = false
     @FocusState private var focus: Field?
     @State private var voiceTarget: VoiceTarget?
+    @State private var makingCard = false
     /// "Compare with mine" on the result screen.
     @State private var comparing = false
     /// Context and tone stay folded on the first screen; words come first.
@@ -409,6 +410,9 @@ struct GuestPracticeMessageView: View {
                 case .context: composer.replyContext = append(text, to: composer.replyContext)
                 }
             }
+        }
+        .sheet(isPresented: $makingCard) {
+            GuestPocketCardSheet(wording: composer.wording, goal: composer.goal, tone: composer.tone)
         }
         .alert("Discard your changes?", isPresented: $confirmDiscard) {
             Button("Keep editing", role: .cancel) {}
@@ -901,6 +905,9 @@ struct GuestPracticeMessageView: View {
             .buttonStyle(GuestBrandButtonStyle())
             .disabled(!composer.canCopy)
             Button("Continue conversation", systemImage: "bubble.left.and.bubble.right") { composer.openReply() }
+                .buttonStyle(GuestBrandButtonStyle(filled: false))
+            // A card to glance at before the real conversation; made from these saved words only.
+            Button("Make a pocket card", systemImage: "rectangle.portrait.on.rectangle.portrait") { makingCard = true }
                 .buttonStyle(GuestBrandButtonStyle(filled: false))
         }
     }
