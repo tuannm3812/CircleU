@@ -41,11 +41,23 @@ struct GuestComposition {
             return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
         }
         // Fixed IDs: the import receipts then make a second run a no-op instead of a duplicate.
-        let seeds: [(id: String, words: String, date: Date, context: GuestEntryContext?, feeling: GuestEntryFeeling?)] = [
+        var seeds: [(id: String, words: String, date: Date, context: GuestEntryContext?, feeling: GuestEntryFeeling?)] = [
             ("7B2C7D1E-0001-4C1E-9B6A-5E0C0A0F0001", "A quiet walk helped me slow down before the group meeting.", at(daysAgo: 0, 8, 15), nil, .calm),
             ("7B2C7D1E-0002-4C1E-9B6A-5E0C0A0F0002", "I said no to the extra shift and felt okay about it.", at(daysAgo: 2, 18, 12), .work, .calm),
             ("7B2C7D1E-0003-4C1E-9B6A-5E0C0A0F0003", "Talked with my sister about our holiday plans.", at(daysAgo: 4, 20, 5), .family, nil),
         ]
+        if UserDefaults.standard.bool(forKey: "CircleUSeedPatterns") {
+            seeds += [
+                ("7B2C7D1E-0004-4C1E-9B6A-5E0C0A0F0004", "Group chat about the slides went quiet again.", at(daysAgo: 1, 21, 10), .study, .worried),
+                ("7B2C7D1E-0005-4C1E-9B6A-5E0C0A0F0005", "Not sure I explained my part clearly.", at(daysAgo: 3, 16, 40), .study, .worried),
+                ("7B2C7D1E-0006-4C1E-9B6A-5E0C0A0F0006", "Too many deadlines landed on the same day.", at(daysAgo: 6, 19, 30), .study, .overloaded),
+                ("7B2C7D1E-0007-4C1E-9B6A-5E0C0A0F0007", "My tutor liked the new outline.", at(daysAgo: 8, 12, 5), .study, .happy),
+                ("7B2C7D1E-0008-4C1E-9B6A-5E0C0A0F0008", "Worried about asking for Friday off.", at(daysAgo: 11, 22, 0), .work, .worried),
+                ("7B2C7D1E-0009-4C1E-9B6A-5E0C0A0F0009", "Coffee with Sam helped a lot.", at(daysAgo: 13, 10, 20), .friends, .happy),
+                ("7B2C7D1E-0010-4C1E-9B6A-5E0C0A0F0010", "We finally agreed who does what.", at(daysAgo: 15, 18, 0), .study, .calm),
+                ("7B2C7D1E-0011-4C1E-9B6A-5E0C0A0F0011", "Still thinking about what was said.", at(daysAgo: 20, 21, 15), .study, .worried),
+            ]
+        }
         let imported = seeds.compactMap { seed -> GuestImportedEntry? in
             guard let id = UUID(uuidString: seed.id) else { return nil }
             return GuestImportedEntry(legacyID: id, originalWords: seed.words, createdAt: seed.date, updatedAt: seed.date, reflection: nil)
