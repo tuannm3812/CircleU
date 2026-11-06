@@ -32,6 +32,8 @@ struct GuestPracticeHomeView: View {
             }
             .background(GuestBrand.ice.ignoresSafeArea())
             .navigationTitle("Practice")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { GuestBrandToolbar(journal: journal, practice: practice) }
             .searchable(text: $query, prompt: "Search messages")
             .onChange(of: practice.dataGeneration) { path = [] } // Delete all closes open messages.
             .navigationDestination(for: GuestPracticeRoute.self) { route in

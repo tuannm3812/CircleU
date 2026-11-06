@@ -78,8 +78,17 @@ final class GuestNudgeModel: ObservableObject {
 
 /// Optional guidance, kept separate from the person's original words.
 enum GuestWritingQuestion: String, CaseIterable, Identifiable {
+    // Looking back.
     case happened = "What happened?"
     case feeling = "How did it make you feel?"
+    case needed = "What did you need in that moment?"
+    // Looking ahead.
     case next = "What would you like to say next?"
+    case outcome = "What do you want to happen?"
+    case wait = "What can wait until tomorrow?"
     var id: String { rawValue }
+
+    /// The picker shows the questions in two short groups.
+    static let lookingBack: [GuestWritingQuestion] = [.happened, .feeling, .needed]
+    static let lookingAhead: [GuestWritingQuestion] = [.next, .outcome, .wait]
 }

@@ -6,7 +6,12 @@ final class GuestJournalTagsUITests: XCTestCase {
         XCTAssertTrue(editor.waitForExistence(timeout: 15))
         editor.tap(); editor.typeText("I asked for more time on the assignment")
         app.buttons["Save"].tap()
-        XCTAssertTrue(app.buttons["Not now"].waitForExistence(timeout: 10))
+        // The Saved card offers tags for the entry just saved (J7.6); cancelling changes nothing.
+        XCTAssertTrue(app.buttons["Add tags"].waitForExistence(timeout: 10))
+        app.buttons["Add tags"].tap()
+        XCTAssertTrue(app.buttons["Study"].waitForExistence(timeout: 5), "the picker opens from the Saved card")
+        app.buttons["Cancel tags"].tap()
+        XCTAssertTrue(app.buttons["Not now"].waitForExistence(timeout: 5))
         app.buttons["Not now"].tap()
     }
     private func shot(_ app: XCUIApplication, _ name: String) {

@@ -73,17 +73,8 @@ struct GuestTodayView: View {
         NavigationStack {
             // Writing and voice share the same composer; neither requires an extra route.
             GuestWriteView(journal: journal, dictationEngine: makeDictationEngine(),
-                           heading: "What’s on your mind?", showsLogo: true, onSaved: onSaved)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        NavigationLink {
-                            GuestSettingsView(journal: journal, practice: practice)
-                        } label: {
-                            Image(systemName: "gearshape")
-                        }
-                        .accessibilityLabel("Settings")
-                    }
-                }
+                           heading: "What’s on your mind?", onSaved: onSaved)
+                .toolbar { GuestBrandToolbar(journal: journal, practice: practice) }
         }
     }
 }
@@ -94,21 +85,17 @@ struct GuestWriteView: View {
     @ObservedObject var journal: GuestJournalViewModel
     @StateObject private var dictation: GuestDictationViewModel
     let heading: String
-    let showsLogo: Bool
     let onSaved: () -> Void
     @FocusState private var focused: Bool
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     @Environment(\.dynamicTypeSize) private var typeSize
-    @AppStorage(GuestAvatars.storageKey) private var avatarID = GuestAvatars.defaultID
-    @State private var choosingPingu = false
     @State private var choosingQuestion = false
 
     init(journal: GuestJournalViewModel, dictationEngine: @autoclosure @escaping () -> any GuestDictationEngine,
-         heading: String = "Start with your words", showsLogo: Bool = false, onSaved: @escaping () -> Void) {
+         heading: String = "Start with your words", onSaved: @escaping () -> Void) {
         self.journal = journal
         self.heading = heading
-        self.showsLogo = showsLogo
         self.onSaved = onSaved
         _dictation = StateObject(wrappedValue: GuestDictationViewModel(journal: journal, engine: dictationEngine()))
     }
@@ -215,45 +202,12 @@ struct GuestWriteView: View {
         }
         .background(GuestBrand.ice.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if showsLogo {
-                ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 8) {
-                        GuestBrandIcon(asset: "GuestIconLogo", size: 32)
-                        if !typeSize.isAccessibilitySize {
-                            Text("CircleU").font(GuestBrand.font(.callout, .semibold))
-                        }
-                    }
-                    .fixedSize(horizontal: true, vertical: false)
-                    .accessibilityElement(children: .ignore).accessibilityLabel("CircleU")
-                }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                GuestAvatarButton(size: 30, onChoose: {
-                    dictation.interrupt(); focused = false; choosingPingu = true
-                }).frame(width: 44, height: 44)
-            }
-        }
-        .sheet(isPresented: $choosingPingu) { GuestAvatarPicker(selection: $avatarID) }
         .sheet(isPresented: $choosingQuestion) {
             NavigationStack {
                 ScrollView {
-                    VStack(spacing: 12) {
-                        ForEach(GuestWritingQuestion.allCases) { question in
-                            Button {
-                                journal.selectedQuestion = question
-                                choosingQuestion = false
-                            } label: {
-                                HStack {
-                                    Text(question.rawValue).fixedSize(horizontal: false, vertical: true)
-                                    Spacer(minLength: 8)
-                                    Image(systemName: "chevron.right").font(.caption)
-                                }
-                                .padding(16).frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
-                                .background(.white, in: RoundedRectangle(cornerRadius: 16))
-                            }
-                            .buttonStyle(.plain).accessibilityLabel(question.rawValue)
-                        }
+                    VStack(alignment: .leading, spacing: 12) {
+                        questionGroup("Looking back", GuestWritingQuestion.lookingBack)
+                        questionGroup("Looking ahead", GuestWritingQuestion.lookingAhead).padding(.top, 8)
                     }.padding(24)
                 }
                 .background(GuestBrand.ice).font(GuestBrand.font(.body)).foregroundStyle(GuestBrand.ink)
@@ -271,6 +225,28 @@ struct GuestWriteView: View {
         }
         .onChange(of: scenePhase) { _, phase in if phase == .background { dictation.interrupt() } }
         .onDisappear { dictation.interrupt() }
+    }
+
+    private func questionGroup(_ title: String, _ questions: [GuestWritingQuestion]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title).font(GuestBrand.font(.subheadline, .semibold)).foregroundStyle(GuestBrand.muted)
+                .accessibilityAddTraits(.isHeader)
+            ForEach(questions) { question in
+                Button {
+                    journal.selectedQuestion = question
+                    choosingQuestion = false
+                } label: {
+                    HStack {
+                        Text(question.rawValue).fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right").font(.caption)
+                    }
+                    .padding(16).frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 16))
+                }
+                .buttonStyle(.plain).accessibilityLabel(question.rawValue)
+            }
+        }
     }
 
     private var micButton: some View {
@@ -388,6 +364,8 @@ struct GuestJournalListView: View {
                 if let entry = journal.reflectionOffer {
                     GuestReflectionOfferCard {
                         reflectingID = entry.id
+                    } onTag: {
+                        taggingEntry = journal.entries.first { $0.id == entry.id } ?? entry
                     } onNotNow: {
                         let motion: Animation? = reduceMotion ? nil : .default // No sliding with Reduce Motion.
                         withAnimation(motion) { journal.dismissReflectionOffer() }
@@ -402,10 +380,13 @@ struct GuestJournalListView: View {
                 }
             }
             .toolbar {
-                Button { withAnimation { showsCalendar.toggle() } } label: {
-                    Image(systemName: showsCalendar ? "list.bullet" : "calendar")
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { withAnimation { showsCalendar.toggle() } } label: {
+                        Image(systemName: showsCalendar ? "list.bullet" : "calendar")
+                    }
+                    .accessibilityLabel(showsCalendar ? "Hide calendar" : "Show calendar")
                 }
-                .accessibilityLabel(showsCalendar ? "Hide calendar" : "Show calendar")
+                GuestBrandToolbar(journal: journal, practice: practice)
             }
             .navigationDestination(for: UUID.self) { id in
                 GuestEntryDetailView(entryID: id, journal: journal, practice: practice)
@@ -435,7 +416,9 @@ private struct GuestJournalRow: View {
                         .foregroundStyle(GuestBrand.ink).frame(maxWidth: .infinity, alignment: .leading)
                     if !statuses.isEmpty {
                         HStack(spacing: 10) {
-                            if entry.reflection != nil { GuestBrandIcon(asset: "GuestIconReflection", size: 18) }
+                            if entry.reflection != nil {
+                                Text("Reflected").font(GuestBrand.font(.caption, .semibold)).foregroundStyle(GuestBrand.muted)
+                            }
                             if entry.nextStep != nil {
                                 Image(systemName: entry.nextStepDone ? "checkmark.circle" : "circle")
                                     .font(.system(size: 16)).foregroundStyle(GuestBrand.blue)
@@ -502,6 +485,7 @@ private struct GuestJournalRow: View {
 /// After saving: a short "Saved" card with an optional reflection. Saving never needs one.
 private struct GuestReflectionOfferCard: View {
     let onReflect: () -> Void
+    let onTag: () -> Void
     let onNotNow: () -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -540,6 +524,13 @@ private struct GuestReflectionOfferCard: View {
             .background(GuestBrand.blue, in: Capsule())
         }
         .accessibilityLabel("Reflect on it")
+        // Tags are the person's own choice, so they are offered here, never guessed.
+        Button(action: onTag) {
+            Text("Tag").font(GuestBrand.font(.subheadline, .semibold)).foregroundStyle(GuestBrand.blue)
+                .padding(.horizontal, 14).frame(minHeight: 44)
+                .background(GuestBrand.blue.opacity(0.1), in: Capsule())
+        }
+        .accessibilityLabel("Add tags")
         Button(action: onNotNow) {
             Image(systemName: "xmark").font(.system(size: 15, weight: .bold)).foregroundStyle(GuestBrand.muted)
                 .frame(width: 44, height: 44).contentShape(Rectangle())

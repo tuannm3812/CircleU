@@ -185,7 +185,44 @@ struct GuestSuccessBanner: View {
     }
 }
 
-/// The avatar shown as a badge on Today and in Settings; tapping it opens the picker.
+/// The same header on Today, Journal and Practice: the brand mark on the left (not a control, so
+/// it has no button background), Settings on the right.
+struct GuestBrandToolbar: ToolbarContent {
+    @ObservedObject var journal: GuestJournalViewModel
+    @ObservedObject var practice: GuestPracticeViewModel
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some ToolbarContent {
+        if #available(iOS 26.0, *) {
+            ToolbarItem(placement: .topBarLeading) { mark }.sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .topBarLeading) { mark }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            NavigationLink {
+                GuestSettingsView(journal: journal, practice: practice)
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .accessibilityLabel("Settings")
+        }
+    }
+
+    private var mark: some View {
+        HStack(spacing: 8) {
+            GuestBrandIcon(asset: "GuestIconLogo", size: 30)
+            if !typeSize.isAccessibilitySize {
+                Text("CircleU").font(GuestBrand.font(.callout, .semibold)).foregroundStyle(GuestBrand.ink)
+            }
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore).accessibilityLabel("CircleU")
+        .accessibilityAddTraits(.isImage)
+    }
+}
+
+/// The avatar shown in Settings; tapping it opens the picker.
 struct GuestAvatarButton: View {
     @AppStorage(GuestAvatars.storageKey) private var avatarID = GuestAvatars.defaultID
     var size: CGFloat = 180
