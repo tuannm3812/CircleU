@@ -65,4 +65,14 @@ final class GuestPocketCardTests: XCTestCase {
         let image = try XCTUnwrap(model.renderImage(), "a very long card still draws")
         XCTAssertEqual(image.size.height * image.scale, GuestPocketCard.exportSize.height, accuracy: 1, "and keeps its size")
     }
+
+    /// The card carries the day it was made, fixed when the sheet opens.
+    func testCardShowsTheDayItWasMade() throws {
+        let day = try XCTUnwrap(Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 6, hour: 9)))
+        let model = GuestPocketCardModel(wording: "Could we talk?", goal: "", tone: "Soft", made: day)
+        XCTAssertEqual(model.card.made, day)
+        XCTAssertEqual(model.card.madeLabel, day.formatted(.dateTime.day().month(.abbreviated)))
+        model.choose(GuestPocketCard.steadyingLines[2]); model.tone = .firm
+        XCTAssertEqual(model.card.made, day, "changing the card does not move its date")
+    }
 }

@@ -323,6 +323,7 @@ Screen: Practice → saved message → "Make a pocket card". States: Soft, Balan
 | P10.2 | Given the card, when I pick one of six steadying lines or write my own (the field stops at 60 characters and shows the count), then the card shows exactly it; clearing my own returns to my pick. | Unit `testSixSteadyingLinesEachShortAndDistinct`, `testMyOwnLineReplacesTheChoiceAndIsTrimmedAndCapped`; same UI test |
 | P10.3 | Given the card, when I choose Share or save, then the system share sheet receives a 1080 × 1350 image; the image is drawn on this iPhone only when I share, the note says sharing sends it where I choose, and closing leaves my saved message unchanged. | Unit `testCardRendersToAShareableImage`; UI checks the action exists and that Close returns to the saved message. The share sheet itself and Save Image on a phone are not automated |
 | P10.4 | Given each tone, when the card draws, then it has its own bundled Pingu. | Unit `testEveryToneHasItsOwnBundledPingu`. Dedicated card illustrations are a later asset batch |
+| P10.5 | Given a card, when it draws, then the day it was made shows small beside the CircleU mark (day and short month, in my locale) and stays the same while I change the card. | Unit `testCardShowsTheDayItWasMade` |
 
 ## 5. Settings
 

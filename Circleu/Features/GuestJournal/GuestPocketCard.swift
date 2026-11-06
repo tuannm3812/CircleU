@@ -28,6 +28,11 @@ struct GuestPocketCard: Equatable, Sendable {
     var want: String?
     var steadyingLine: String
     var tone: Tone
+    /// The day the card was made, shown small beside the mark so an old card is easy to tell apart.
+    var made: Date
+
+    /// Day and short month in the person's own locale and calendar, such as "6 Nov".
+    var madeLabel: String { made.formatted(.dateTime.day().month(.abbreviated)) }
 
     static let steadyingLineLimit = 60
     static let steadyingLines = [
@@ -85,7 +90,11 @@ final class GuestPocketCardModel: ObservableObject {
         }
     }
 
-    init(wording: String, goal: String, tone: String) {
+    /// Fixed when the sheet opens, so the date does not move while the card is on screen.
+    private let made: Date
+
+    init(wording: String, goal: String, tone: String, made: Date = .now) {
+        self.made = made
         self.wording = wording.trimmingCharacters(in: .whitespacesAndNewlines)
         self.goal = goal.trimmingCharacters(in: .whitespacesAndNewlines)
         self.tone = GuestPocketCard.Tone(rawValue: tone) ?? .balanced
@@ -99,7 +108,7 @@ final class GuestPocketCardModel: ObservableObject {
     var card: GuestPocketCard {
         let own = ownLine.trimmingCharacters(in: .whitespacesAndNewlines)
         return GuestPocketCard(wording: wording, want: goal.isEmpty ? nil : goal,
-                               steadyingLine: own.isEmpty ? chosenLine : own, tone: tone)
+                               steadyingLine: own.isEmpty ? chosenLine : own, tone: tone, made: made)
     }
 
     func renderImage() -> UIImage? { Self.renderImage(of: card) }
@@ -144,7 +153,7 @@ struct GuestPocketCardView: View {
                     .layoutPriority(1).padding(.trailing, 150 * scale)
                 HStack(spacing: 6 * scale) {
                     Image("GuestIconLogo").resizable().scaledToFit().frame(width: 18 * scale, height: 18 * scale)
-                    Text("CircleU").font(font(12, .semibold)).opacity(0.85)
+                    Text("CircleU · \(card.madeLabel)").font(font(12, .semibold)).opacity(0.85)
                 }
                 .accessibilityHidden(true)
             }
@@ -157,7 +166,8 @@ struct GuestPocketCardView: View {
     }
 
     private var spokenSummary: String {
-        ["Pocket card.", card.wording, card.want.map { "What I want: \($0)" }, card.steadyingLine]
+        ["Pocket card.", card.wording, card.want.map { "What I want: \($0)" }, card.steadyingLine,
+         "Made \(card.madeLabel)."]
             .compactMap { $0 }.joined(separator: " ")
     }
 
@@ -187,8 +197,8 @@ struct GuestPocketCardSheet: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @FocusState private var writingOwn: Bool
 
-    init(wording: String, goal: String, tone: String) {
-        _model = StateObject(wrappedValue: GuestPocketCardModel(wording: wording, goal: goal, tone: tone))
+    init(wording: String, goal: String, tone: String, made: Date = .now) {
+        _model = StateObject(wrappedValue: GuestPocketCardModel(wording: wording, goal: goal, tone: tone, made: made))
     }
 
     var body: some View {
