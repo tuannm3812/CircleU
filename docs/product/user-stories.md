@@ -312,6 +312,18 @@ Screen: Practice → "What would you like to say?" → optional "What do you wan
 
 31 October: the native route above replaces the Prepare → Continue → Refine entry; earlier P3/P5/P6 UI tests now reach "Your wording" through Review wording → Keep my wording. 30 October review 08 provides partial browser evidence for P9.1–P9.5: typed entry without setup, guidance Back/Continue preservation, blank validation, intent-labelled confirmation/result, no generation on guidance Continue, selected context and separate Use/Copy/Save actions. See [checks and screenshots](../../Prototypes/CircleUVisualPrototype/PracticeFeedbackReview/README.md). No native P9 tests, real voice integration into this route, durable storage or provider tests were added. P5 conversation attribution, P6 voice review, P7 feedback/stale results and P8 consent continue to apply. The showcase entry choice does not change the app's default launch tab.
 
+## Pocket card — M04 — F12
+
+**P10.** As someone about to have the real conversation, I want a small card with my wording and one steadying line, so that I can glance at it just before I talk. Built 6 November from the owner-approved prototype; image only, no widget yet.
+Screen: Practice → saved message → "Make a pocket card". States: Soft, Balanced, Firm; chosen line; my own line.
+
+| # | Given / When / Then | Test |
+| --- | --- | --- |
+| P10.1 | Given a saved message, when I make a card, then it shows my saved wording, my goal as "What I want" when I gave one, and the tone I chose in Practice. Nothing is generated. | Unit `GuestPocketCardTests.testCardUsesMyWordingMyGoalAndTheToneIChoseInPractice`, `testWantIsLeftOffWhenNoGoalWasGiven`; UI `GuestPocketCardUITests.testMakeAPocketCardFromASavedMessage` |
+| P10.2 | Given the card, when I pick one of six steadying lines or write my own (60 characters), then the card shows it; clearing my own returns to my pick. | Unit `testSixSteadyingLinesEachShortAndDistinct`, `testMyOwnLineReplacesTheChoiceAndIsTrimmedAndCapped`; same UI test |
+| P10.3 | Given the card, when I choose Share or save, then the system share sheet receives a 1080 × 1350 image; nothing is uploaded by the app, and closing leaves my saved message unchanged. | Unit `testCardRendersToAShareableImage`; UI checks the action exists and that Close returns to the saved message. The share sheet itself and Save Image on a phone are not automated |
+| P10.4 | Given each tone, when the card draws, then it has its own bundled Pingu. | Unit `testEveryToneHasItsOwnBundledPingu`. Dedicated card illustrations are a later asset batch |
+
 ## 5. Settings
 
 S1 describes the current guest baseline. If P8 is implemented, revise the privacy summary and its tests before enabling online requests; do not reuse a blanket local-only claim for cloud processing.
