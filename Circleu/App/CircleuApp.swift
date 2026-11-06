@@ -22,6 +22,7 @@ struct CircleuApp: App {
             for folder in ["GuestJournal", "GuestJournalSetup"] {
                 try? FileManager.default.removeItem(at: support.appendingPathComponent(folder))
             }
+            GuestPocketCardShelf.standard.takeOff()
             for key in ["circleu.guest.welcomeSeen.v1", GuestAvatars.storageKey] {
                 UserDefaults.standard.removeObject(forKey: key)
             }

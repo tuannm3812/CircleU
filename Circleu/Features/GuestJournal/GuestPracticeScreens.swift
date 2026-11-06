@@ -412,7 +412,7 @@ struct GuestPracticeMessageView: View {
             }
         }
         .sheet(isPresented: $makingCard) {
-            GuestPocketCardSheet(wording: composer.wording, goal: composer.goal, tone: composer.tone)
+            GuestPocketCardSheet(wording: composer.wording, goal: composer.goal, tone: composer.tone, messageID: composer.saved?.id)
         }
         .alert("Discard your changes?", isPresented: $confirmDiscard) {
             Button("Keep editing", role: .cancel) {}
