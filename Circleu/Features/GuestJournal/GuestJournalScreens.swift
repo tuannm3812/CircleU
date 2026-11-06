@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Guest experience shell: Today, Journal and Practice.
+/// Guest experience shell: Today, Journal, Practice and Patterns.
 struct GuestHomeView: View {
     @ObservedObject var journal: GuestJournalViewModel
     @ObservedObject var practice: GuestPracticeViewModel
@@ -9,7 +9,7 @@ struct GuestHomeView: View {
     let suggester: any GuestSuggesting
     @State private var tab: Tab = .today
 
-    enum Tab: Hashable { case today, journal, practice }
+    enum Tab: Hashable { case today, journal, practice, patterns }
 
     var body: some View {
         TabView(selection: $tab) {
@@ -23,6 +23,9 @@ struct GuestHomeView: View {
             GuestPracticeHomeView(practice: practice, journal: journal)
                 .tabItem { GuestTabLabel(title: "Practice", icon: "GuestIconPractice") }
                 .tag(Tab.practice)
+            GuestPatternsView(journal: journal, practice: practice)
+                .tabItem { GuestTabLabel(title: "Patterns", icon: "GuestIconFeelings") }
+                .tag(Tab.patterns)
         }
         .tint(GuestBrand.blue)
         .preferredColorScheme(.light) // Dark mode is deferred; the palette is light-only for now.

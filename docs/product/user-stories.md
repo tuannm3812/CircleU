@@ -342,6 +342,15 @@ Screen: Practice → saved message → "Make a pocket card". States: Soft, Balan
 | P12.2 | Given Journal, when I search, open the calendar or pick a day, then the heading and scene step aside for the results. | Existing search and calendar UI tests |
 | P12.3 | Given Practice with nothing saved, then no search bar shows; with messages, it matches Journal's, and a search does not carry over once the last message is deleted. | Checked in captures; no test asserts the bar's absence or the reset |
 
+**P13.** As someone who keeps a journal, I want to see what my tags add up to, so that I notice what keeps coming up. Built 6 November; owner-approved fourth tab.
+
+| ID | Acceptance criteria | Evidence |
+| --- | --- | --- |
+| P13.1 | Given fewer than three tagged entries, then Patterns says to tag a few entries. | Unit `testThreeTaggedEntriesAreEnough`; UI `testEmptyUntilAFewEntriesAreTagged` |
+| P13.2 | Given enough tags, then feelings and contexts show as counts, most often first. Untagged entries are never counted or guessed. | Unit `testCountsMyTagsMostOftenFirst`, `testUntaggedEntriesStayOutOfTheCounts`; UI `testCountsAndPeriods` |
+| P13.3 | Given a context and feeling chosen together more than once, then the most frequent pair shows as a plain count. | Unit `testTogetherNeedsMoreThanOneEntry` |
+| P13.4 | Given the period switch, then 4 weeks leaves out older entries and All time includes them. | Unit `testFourWeeksLeavesOutOlderEntries`; UI `testCountsAndPeriods` |
+
 ## 5. Settings
 
 S1 describes the current guest baseline. If P8 is implemented, revise the privacy summary and its tests before enabling online requests; do not reuse a blanket local-only claim for cloud processing.
