@@ -155,27 +155,41 @@ final class GuestStatesUITests: XCTestCase {
         XCTAssertTrue(chip.waitForExistence(timeout: 5), "back in Settings")
     }
 
-    /// S4.2 and S4.3: the chosen Pingu is kept across launches, and opening the picker from the
-    /// badge on Today stops dictation.
-    func testPinguChoiceIsKeptAndThePickerStopsDictation() throws {
+    /// S4.2: the Pingu is chosen in Settings and kept across launches. Today's header carries
+    /// only the brand mark and Settings (phone review, 6 November).
+    func testPinguChoiceIsMadeInSettingsAndKept() throws {
         continueAfterFailure = false
-        var app = launchGuest(fresh: true, ["-CircleUScriptedDictation", "Spoken before choosing"])
-        let editor = app.textViews["Your words"]
-        XCTAssertTrue(editor.waitForExistence(timeout: 15))
-        app.buttons["Start dictation"].tap()
-        XCTAssertTrue(app.buttons["Stop dictation"].waitForExistence(timeout: 5), "listening")
+        var app = launchGuest(fresh: true)
+        XCTAssertTrue(app.textViews["Your words"].waitForExistence(timeout: 15))
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Your Pingu")).firstMatch.exists,
+                       "no avatar control in Today's header")
+        XCTAssertTrue(app.images["CircleU"].exists || app.staticTexts["CircleU"].exists || app.otherElements["CircleU"].exists,
+                      "the brand mark is shown")
+        XCTAssertFalse(app.buttons["CircleU"].exists, "and it is not a button")
+        app.buttons["Settings"].tap()
         let avatar = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Your Pingu")).firstMatch
-        XCTAssertTrue(avatar.waitForExistence(timeout: 5), "the badge on the scene")
+        XCTAssertTrue(avatar.waitForExistence(timeout: 10))
         avatar.tap()
         XCTAssertTrue(app.navigationBars["Choose your Pingu"].waitForExistence(timeout: 5))
         app.buttons["Pingu reading"].tap()
         app.buttons["Done"].tap()
-        XCTAssertTrue(app.buttons["Start dictation"].waitForExistence(timeout: 5), "dictation stopped")
-        XCTAssertFalse(app.buttons["Stop dictation"].exists)
-        XCTAssertTrue((editor.value as? String ?? "").contains("Spoken before choosing"), "the words so far are kept")
+        XCTAssertTrue(app.buttons["Your Pingu: Pingu reading"].waitForExistence(timeout: 5))
 
         app = launchGuest(fresh: false)
-        XCTAssertTrue(app.buttons["Your Pingu: Pingu reading"].waitForExistence(timeout: 10), "kept across launches, on Today")
+        app.buttons["Settings"].tap()
+        XCTAssertTrue(app.buttons["Your Pingu: Pingu reading"].waitForExistence(timeout: 10), "kept across launches")
         shot(app, "pingu-kept")
+    }
+
+    /// The same header on all three tabs: brand mark and Settings.
+    func testEveryTabHasTheSameHeader() throws {
+        continueAfterFailure = false
+        let app = launchGuest(fresh: true)
+        for tab in ["Today", "Journal", "Practice"] {
+            app.tabBars.buttons[tab].tap()
+            XCTAssertTrue(app.buttons["Settings"].waitForExistence(timeout: 10), "\(tab) has Settings")
+            XCTAssertFalse(app.buttons["CircleU"].exists, "\(tab): the mark is not a button")
+        }
+        shot(app, "header-practice")
     }
 }

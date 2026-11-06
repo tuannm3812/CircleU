@@ -44,16 +44,13 @@ final class GuestTodayUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Suggest a question"].exists)
     }
 
-    func testTodayAtLargestTextKeepsPromptsAvatarAndSaveReachable() throws {
+    func testTodayAtLargestTextKeepsPromptsSettingsAndSaveReachable() throws {
         continueAfterFailure = false
         let app = launchGuest(fresh: true,
                               ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
         let editor = app.textViews["Your words"]
         XCTAssertTrue(editor.waitForExistence(timeout: 15))
-        let avatar = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Your Pingu:")).firstMatch
-        XCTAssertTrue(avatar.isHittable)
-        avatar.tap()
-        app.buttons["Done"].tap()
+        XCTAssertTrue(app.buttons["Settings"].isHittable, "the header keeps Settings at the largest text")
         let prompt = app.buttons["Suggest a question"]
         for _ in 0..<6 where !prompt.isHittable { app.swipeUp() }
         XCTAssertTrue(prompt.isHittable)

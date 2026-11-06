@@ -118,7 +118,7 @@ Screen: Reflection review, Entry. States: filled, done or not done.
 
 | # | Given / When / Then | Test |
 | --- | --- | --- |
-| T8.1 | Given an empty or filled draft, when I open Suggest a question / Change question, then I can choose What happened?, How did it make you feel?, or What would you like to say next?. | UI `GuestTodayUITests.testQuestionGuidancePreservesWordsAndResetsAfterSave` (new native slice) |
+| T8.1 | Given an empty or filled draft, when I open Suggest a question / Change question, then I can choose one of six questions in two groups: Looking back (What happened? How did it make you feel? What did you need in that moment?) and Looking ahead (What would you like to say next? What do you want to happen? What can wait until tomorrow?). | UI `GuestTodayUITests.testQuestionGuidancePreservesWordsAndResetsAfterSave` (new native slice) |
 | T8.2 | Given a draft, when I select, change, remove or cancel a question, then every original character remains unchanged. | Same UI test |
 | T8.3 | Given a successful save and an empty next draft, when I return, then the selected question resets. A failed save retains words and guidance. | Same UI test; `GuestNativeAlignmentTests.testFailedSaveKeepsQuestionAndWords`, `GuestJournalViewModelTests.testTextTypedDuringSaveIsKept` |
 
@@ -129,8 +129,8 @@ Screen: Reflection review, Entry. States: filled, done or not done.
 | # | Given / When / Then | Test |
 | --- | --- | --- |
 | T10.1 | Given Today, when I write or dictate, then the microphone stays in the composer footer and Save stays above the keyboard. | UI `GuestTodayUITests.testQuestionGuidancePreservesWordsAndResetsAfterSave`; existing voice UI suite |
-| T10.2 | Given dictation, when I stop/cancel or choose my Pingu, then listening stops and text handling keeps its existing contract. | UI `GuestStatesUITests.testPinguChoiceIsKeptAndThePickerStopsDictation` |
-| T10.3 | Given largest text, when I scroll Today and its question picker, then questions, microphone, avatar and Save remain reachable. | UI `GuestTodayUITests.testTodayAtLargestTextKeepsPromptsAvatarAndSaveReachable`; physical follow-up pending |
+| T10.2 | Given dictation, when I stop or cancel, then listening stops and text handling keeps its existing contract. Today's header no longer carries the Pingu picker (6 November phone review), so it cannot interrupt dictation. | Existing voice UI suite |
+| T10.3 | Given largest text, when I scroll Today and its question picker, then questions, microphone, Settings and Save remain reachable. | UI `GuestTodayUITests.testTodayAtLargestTextKeepsPromptsSettingsAndSaveReachable`; physical follow-up pending |
 
 ## 3. Journal
 
@@ -148,6 +148,7 @@ Screen: Journal. States: empty, filled, error.
 | # | Given / When / Then | Test |
 | --- | --- | --- |
 | J7.1 | Given an old or new untagged entry, when loaded, then tags remain unset and no feeling is inferred. | `GuestEntryTagTests.testV5MigrationPreservesEntriesReflectionConversationAndDraftsWithNoInventedTags` |
+| J7.6 | Given I just saved an entry, when the Saved card shows, then I can open the tag picker for that entry from it; tags are never inferred. | UI `GuestJournalTagsUITests.testTagsSaveCancelClearAndReopen` |
 | J7.2 | Given the picker, when Done succeeds, then the left context chip and right labelled feeling portrait reflect the independent selections. | `GuestJournalTagsUITests.testTagsSaveCancelClearAndReopen` |
 | J7.3 | Given saved tags, when I change or deselect them, then Done changes only tags and Cancel leaves saved values unchanged. | Same UI test; `GuestEntryTagTests.testTagsSurviveReopenAndWordEditsAndCanBeClearedIndependently` |
 | J7.4 | Given a failed, stale or deleted-entry save, when Done runs, then it does not overwrite newer words or recreate the entry. | `GuestEntryTagTests.testStaleDeletedAndFailedTagSavesNeverOverwriteSavedWords`; `GuestNativeAlignmentTests.testTagPickerRejectsStaleSaveAndKeepsChoicesWithoutOverwritingWords`, `testTagPickerFailedSaveKeepsChoicesAndCanRetry` |
@@ -347,8 +348,9 @@ Screen: Today (the Pingu badge on the scene) or Settings → Your Pingu. States:
 | # | Given / When / Then | Test |
 | --- | --- | --- |
 | S4.1 | Given the picker, when it opens, then all 21 Pingu avatars show with spoken names. | Unit (partial, checks bundled art and names) `GuestPinguArtTests.testAll21AvatarsAndIconsAreBundled`; UI `GuestPolishUITests.testPinguArtScreens` |
-| S4.2 | Given I pick a Pingu, when the app relaunches, then the same Pingu shows on Today's badge. | UI `GuestStatesUITests.testPinguChoiceIsKeptAndThePickerStopsDictation` |
-| S4.3 | Given I'm dictating, when I tap the Pingu badge, then dictation stops and my words are kept. | UI (partial, checked once the picker closes) `GuestStatesUITests.testPinguChoiceIsKeptAndThePickerStopsDictation` |
+| S4.2 | Given I pick a Pingu in Settings, when the app relaunches, then the same Pingu shows in Settings. | UI `GuestStatesUITests.testPinguChoiceIsMadeInSettingsAndKept` |
+| S4.3 | Retired 6 November: the Pingu badge left Today's header, so there is no picker to open while dictating. | None |
+| S4.4 | Given any of the three tabs, when it opens, then the header shows the brand mark (not a button) on the left and Settings on the right. | UI `GuestStatesUITests.testEveryTabHasTheSameHeader`, `testPinguChoiceIsMadeInSettingsAndKept` |
 
 **S5. Log in and bring in my backup.** As a returning person, I want to log in once and copy my earlier account's backup, so that my old journal is here without anything new being uploaded.
 Screen: Log in → Backup preview → Copied. States: filled, in progress, error (wrong details, offline), done.

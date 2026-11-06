@@ -86,4 +86,13 @@ final class GuestNativeAlignmentTests: XCTestCase {
         XCTAssertEqual(groups.first?.entries.first?.id, later.id)
         XCTAssertEqual(groups.last?.entries.first?.id, earlier.id)
     }
+
+    /// Phone review, 6 November: six questions in two groups, each one line.
+    func testWritingQuestionsComeInTwoGroupsOfThree() {
+        XCTAssertEqual(GuestWritingQuestion.allCases.count, 6)
+        XCTAssertEqual(GuestWritingQuestion.lookingBack.count, 3)
+        XCTAssertEqual(GuestWritingQuestion.lookingAhead.count, 3)
+        XCTAssertEqual(Set(GuestWritingQuestion.lookingBack + GuestWritingQuestion.lookingAhead), Set(GuestWritingQuestion.allCases))
+        XCTAssertTrue(GuestWritingQuestion.allCases.allSatisfy { $0.rawValue.count <= 60 && $0.rawValue.hasSuffix("?") })
+    }
 }
