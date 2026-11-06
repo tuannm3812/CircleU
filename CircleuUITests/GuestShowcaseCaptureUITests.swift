@@ -18,9 +18,10 @@ final class GuestShowcaseCaptureUITests: XCTestCase {
         let app = launchGuest(fresh: true, ["-CircleUGuidedSuggestions", "YES", "-CircleUSeedShowcase", "YES"])
         app.tabBars.buttons["Journal"].tap()
         XCTAssertTrue(has(app, "A quiet walk helped me slow down", 10))
+        shot(app, "showcase-journal")
+        app.swipeUp() // The third entry sits below the page top.
         XCTAssertTrue(has(app, "Talked with my sister"))
         XCTAssertTrue(app.buttons["Context: Family"].exists && app.buttons["Feeling: Calm"].exists, "seeded tags")
-        shot(app, "showcase-journal")
 
         app.tabBars.buttons["Today"].tap()
         XCTAssertTrue(app.textViews["Your words"].waitForExistence(timeout: 5))
@@ -28,6 +29,7 @@ final class GuestShowcaseCaptureUITests: XCTestCase {
 
         app.tabBars.buttons["Practice"].tap()
         XCTAssertTrue(app.buttons["Practice a message"].waitForExistence(timeout: 10))
+        shot(app, "showcase-practicehome")
         app.buttons["Practice a message"].tap()
         let wording = app.textViews["Your wording"]
         XCTAssertTrue(wording.waitForExistence(timeout: 5))

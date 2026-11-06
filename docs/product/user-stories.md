@@ -334,6 +334,14 @@ Screen: Practice → saved message → "Make a pocket card". States: Soft, Balan
 | P11.3 | Given the widget, when I tap it, then the app opens the whole card, also from a cold start, and I can take it off the Home Screen there. | UI `testShowOnHomeScreenThenOpenAndTakeOff` (by the widget's URL, not a real widget tap) |
 | P11.4 | Given a card on the Home Screen, when its message is deleted (alone or with its entry) or I delete all, then the card goes too; if it cannot be removed, Delete all says something was left. | Unit `testDeletingTheMessageTakesItsCardOff`, `testDeleteAllTakesTheCardOff`, `testACardThatCannotBeRemovedIsReported` |
 
+**P12.** As someone moving between tabs, I want Today, Journal and Practice to start the same way, so that the app feels like one place. Built 6 November from the owner-approved before and after.
+
+| ID | Acceptance criteria | Evidence |
+| --- | --- | --- |
+| P12.1 | Given any tab, then it shows its title, one heading and its scene at the same size; at the largest text sizes the scene is left out. | `GuestPageTop`; capture `GuestShowcaseCaptureUITests` |
+| P12.2 | Given Journal, when I search, open the calendar or pick a day, then the heading and scene step aside for the results. | Existing search and calendar UI tests |
+| P12.3 | Given Practice with nothing saved, then no search bar shows; with messages, it matches Journal's, and a search does not carry over once the last message is deleted. | Checked in captures; no test asserts the bar's absence or the reset |
+
 ## 5. Settings
 
 S1 describes the current guest baseline. If P8 is implemented, revise the privacy summary and its tests before enabling online requests; do not reuse a blanket local-only claim for cloud processing.

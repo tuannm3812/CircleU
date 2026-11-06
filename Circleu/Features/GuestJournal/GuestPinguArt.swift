@@ -93,6 +93,28 @@ enum GuestSceneArt: String, CaseIterable {
     static func today(listening: Bool) -> GuestSceneArt { listening ? .voiceCorner : .windowPause }
 }
 
+/// The top of every tab: one heading, then its scene, the same size on Today, Journal and Practice.
+struct GuestPageTop: View {
+    let heading: String
+    let scene: GuestSceneArt
+    /// Off while typing, so the words get the room.
+    var showsScene = true
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(heading)
+                .font(GuestBrand.font(size: 24, relativeTo: .title2, weight: .semibold))
+                .accessibilityAddTraits(.isHeader)
+            if showsScene && !typeSize.isAccessibilitySize {
+                Color.clear.aspectRatio(2, contentMode: .fit)
+                    .overlay { Image(scene.asset).resizable().scaledToFill() }
+                    .clipShape(RoundedRectangle(cornerRadius: 24)).accessibilityHidden(true)
+            }
+        }
+    }
+}
+
 /// A wide Pingu scene at the full width it's given. Decorative like `GuestPinguDecoration`;
 /// callers leave it out at the largest text sizes. Older 1170×600 art passes its own ratio.
 struct GuestScene: View {
