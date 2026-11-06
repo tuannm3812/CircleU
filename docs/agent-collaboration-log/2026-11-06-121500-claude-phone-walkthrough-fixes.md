@@ -21,3 +21,7 @@ The brand mark and name on Today sat in a rounded capsule that looked tappable a
 ## Verification
 
 Focused unit tests and the full suites are recorded in the PR. Simulator results; the owner's phone gets the build after merge.
+
+## Review
+
+Codex (`gpt-6-astra`, read-only): no blockers. It confirmed dictation still stops when leaving Today for Settings (`onDisappear`), that the Tag action reads the current entry and the picker's stale/deleted checks still apply, and that the new question cases need no migration (the selection is in memory only). Applied: removed the now-unused `avatarID` from the write view. Left for later: UI coverage of saving tags from the Saved card (the test opens and cancels), and of dictation stopping through Settings navigation.

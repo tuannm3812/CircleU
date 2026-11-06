@@ -90,7 +90,6 @@ struct GuestWriteView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     @Environment(\.dynamicTypeSize) private var typeSize
-    @AppStorage(GuestAvatars.storageKey) private var avatarID = GuestAvatars.defaultID
     @State private var choosingQuestion = false
 
     init(journal: GuestJournalViewModel, dictationEngine: @autoclosure @escaping () -> any GuestDictationEngine,
