@@ -181,6 +181,11 @@ final class GuestPracticeViewModel: ObservableObject {
         }
     }
 
+    static let pocketCardLeftMessage = "Your pocket card is still on the Home Screen. Tap it to take it off."
+
+    /// Where the Home Screen card lives (tests inject a temporary one).
+    var pocketCardShelf = GuestPocketCardShelf.standard
+
     var messages: [GuestPracticeMessage] {
         if case .loaded(let messages) = loadState { messages } else { [] }
     }
@@ -196,7 +201,9 @@ final class GuestPracticeViewModel: ObservableObject {
     func load() async {
         if case .loaded = loadState {} else { loadState = .loading }
         do {
-            loadState = .loaded(try await store.loadPractice())
+            let messages = try await store.loadPractice()
+            loadState = .loaded(messages)
+            pocketCardShelf.retire(keeping: messages.map(\.id))
         } catch {
             loadState = .failed(Self.loadFailedMessage)
         }
@@ -212,6 +219,7 @@ final class GuestPracticeViewModel: ObservableObject {
         } catch {
             return Self.deleteFailedMessage
         }
+        retirePocketCard(deleted: [id], journal: journal)
         await load()
         return nil
     }
@@ -220,6 +228,7 @@ final class GuestPracticeViewModel: ObservableObject {
     /// Returns nil when deleted, or the message to show. A failed delete keeps everything.
     func deleteEntry(id: UUID, linkedPractice: GuestLinkedPracticeChoice,
                      journal: GuestJournalViewModel) async -> String? {
+        let linked = linkedMessages(to: id).map(\.id)
         do {
             try await store.deleteEntry(id: id, linkedPractice: linkedPractice)
         } catch GuestJournalError.savedButUnprotected {
@@ -229,9 +238,15 @@ final class GuestPracticeViewModel: ObservableObject {
         } catch {
             return Self.deleteFailedMessage
         }
+        if linkedPractice == .deleteBoth { retirePocketCard(deleted: linked, journal: journal) }
         await journal.load()
         await load()
         return nil
+    }
+
+    /// Straight after the delete commits, so it doesn't depend on the reload that follows.
+    private func retirePocketCard(deleted ids: [UUID], journal: GuestJournalViewModel) {
+        if !pocketCardShelf.retire(deleted: ids) { journal.addNotice(Self.pocketCardLeftMessage) }
     }
 }
 

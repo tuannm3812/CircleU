@@ -325,6 +325,15 @@ Screen: Practice → saved message → "Make a pocket card". States: Soft, Balan
 | P10.4 | Given each tone, when the card draws, then it has its own bundled Pingu. | Unit `testEveryToneHasItsOwnBundledPingu`. Dedicated card illustrations are a later asset batch |
 | P10.5 | Given a card, when it draws, then the day it was made shows small beside the CircleU mark (day and short month, in my locale) and stays the same while I change the card. | Unit `testCardShowsTheDayItWasMade` |
 
+**P11.** As someone with a hard conversation coming, I want my pocket card on my Home Screen, so that I see my words without opening the app. Built 6 November; Guest Test only.
+
+| ID | Acceptance criteria | Evidence |
+| --- | --- | --- |
+| P11.1 | Given a card, when I do nothing, then it stays off the Home Screen; when I tap Show on Home Screen, then that exact card goes to the widget and the sheet says "On your Home Screen". Changing the card offers Show on Home Screen again. | Unit `testNothingReachesTheShelfUntilIAsk`, `testShowOnHomeScreenKeepsExactlyTheCardIMade`, `testChangingTheCardOffersToShowItAgain`; UI `testShowOnHomeScreenThenOpenAndTakeOff` |
+| P11.2 | Given the widget, then the small size shows my steadying line, the medium size my wording and line, each with the tone's Pingu; with no card it says "No card yet". The words are hidden on locked screens. | Layouts rendered and checked by eye; placing the widget and the locked redaction are checked on the phone, not by a test |
+| P11.3 | Given the widget, when I tap it, then the app opens the whole card, also from a cold start, and I can take it off the Home Screen there. | UI `testShowOnHomeScreenThenOpenAndTakeOff` (by the widget's URL, not a real widget tap) |
+| P11.4 | Given a card on the Home Screen, when its message is deleted (alone or with its entry) or I delete all, then the card goes too; if it cannot be removed, Delete all says something was left. | Unit `testDeletingTheMessageTakesItsCardOff`, `testDeleteAllTakesTheCardOff`, `testACardThatCannotBeRemovedIsReported` |
+
 ## 5. Settings
 
 S1 describes the current guest baseline. If P8 is implemented, revise the privacy summary and its tests before enabling online requests; do not reuse a blanket local-only claim for cloud processing.

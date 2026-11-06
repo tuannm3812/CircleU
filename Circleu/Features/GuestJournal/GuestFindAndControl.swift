@@ -278,6 +278,7 @@ final class GuestSettingsViewModel: ObservableObject {
         }
         let exportsRemoved = Self.removeExports()
         GuestAvatars.reset() // The chosen Pingu goes back to the default too.
+        if !practice.pocketCardShelf.takeOff() { leftovers = true } // Nothing stays on the Home Screen.
         await journal.load()
         await practice.load()
         message = exportsRemoved && !leftovers ? Self.deletedMessage : Self.deletedExportPendingMessage

@@ -3,6 +3,7 @@ import CoreTransferable
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+import WidgetKit
 
 /// A card to glance at before the real conversation. Everything on it is something the person
 /// wrote or chose: their wording, what they want to happen (when they said), and one steadying
@@ -59,6 +60,47 @@ struct GuestPocketCard: Equatable, Sendable {
     }
 }
 
+extension GuestPocketCard {
+    /// The copy the widget shows; `messageID` ties it to the saved message it came from.
+    func snapshot(messageID: UUID?) -> GuestPocketCardSnapshot {
+        GuestPocketCardSnapshot(wording: wording, want: want, steadyingLine: steadyingLine, tone: tone.rawValue,
+                                made: made, messageID: messageID)
+    }
+
+    init(snapshot: GuestPocketCardSnapshot) {
+        self.init(wording: snapshot.wording, want: snapshot.want, steadyingLine: snapshot.steadyingLine,
+                  tone: Tone(rawValue: snapshot.tone) ?? .balanced, made: snapshot.made)
+    }
+}
+
+extension GuestPocketCardShelf {
+    /// Puts the card on the Home Screen widget. Only ever called from the person's own tap.
+    func show(_ card: GuestPocketCardSnapshot) throws {
+        try save(card)
+        WidgetCenter.shared.reloadTimelines(ofKind: Self.widgetKind)
+    }
+
+    /// True when no card is left behind.
+    @discardableResult func takeOff() -> Bool {
+        let removed = remove()
+        WidgetCenter.shared.reloadTimelines(ofKind: Self.widgetKind)
+        return removed
+    }
+
+    /// Catches a card whose message is gone, such as after an earlier failed removal.
+    func retire(keeping messageIDs: [UUID]) {
+        guard let id = load()?.messageID, !messageIDs.contains(id) else { return }
+        takeOff()
+    }
+
+    /// A deleted message takes its card with it, so deleted words never stay on the Home Screen.
+    /// False when the card is one of these and could not be removed.
+    func retire(deleted messageIDs: [UUID]) -> Bool {
+        guard let id = load()?.messageID, messageIDs.contains(id) else { return true }
+        return takeOff()
+    }
+}
+
 /// The image handed to the share sheet, drawn only when the person actually shares or saves.
 struct GuestPocketCardExport: Transferable {
     let card: GuestPocketCard
@@ -92,9 +134,18 @@ final class GuestPocketCardModel: ObservableObject {
 
     /// Fixed when the sheet opens, so the date does not move while the card is on screen.
     private let made: Date
+    private let messageID: UUID?
+    private let shelf: GuestPocketCardShelf
+    /// The card on the Home Screen widget, if any.
+    @Published private(set) var onHomeScreen: GuestPocketCardSnapshot?
+    @Published private(set) var homeScreenFailed = false
 
-    init(wording: String, goal: String, tone: String, made: Date = .now) {
+    init(wording: String, goal: String, tone: String, made: Date = .now, messageID: UUID? = nil,
+         shelf: GuestPocketCardShelf = .standard) {
         self.made = made
+        self.messageID = messageID
+        self.shelf = shelf
+        onHomeScreen = shelf.load()
         self.wording = wording.trimmingCharacters(in: .whitespacesAndNewlines)
         self.goal = goal.trimmingCharacters(in: .whitespacesAndNewlines)
         self.tone = GuestPocketCard.Tone(rawValue: tone) ?? .balanced
@@ -109,6 +160,20 @@ final class GuestPocketCardModel: ObservableObject {
         let own = ownLine.trimmingCharacters(in: .whitespacesAndNewlines)
         return GuestPocketCard(wording: wording, want: goal.isEmpty ? nil : goal,
                                steadyingLine: own.isEmpty ? chosenLine : own, tone: tone, made: made)
+    }
+
+    /// Whether the widget shows this card exactly as it looks now.
+    var isOnHomeScreen: Bool { onHomeScreen == card.snapshot(messageID: messageID) }
+
+    func showOnHomeScreen() {
+        let snapshot = card.snapshot(messageID: messageID)
+        do {
+            try shelf.show(snapshot)
+            onHomeScreen = snapshot
+            homeScreenFailed = false
+        } catch {
+            homeScreenFailed = true
+        }
     }
 
     func renderImage() -> UIImage? { Self.renderImage(of: card) }
@@ -197,8 +262,9 @@ struct GuestPocketCardSheet: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @FocusState private var writingOwn: Bool
 
-    init(wording: String, goal: String, tone: String, made: Date = .now) {
-        _model = StateObject(wrappedValue: GuestPocketCardModel(wording: wording, goal: goal, tone: tone, made: made))
+    init(wording: String, goal: String, tone: String, made: Date = .now, messageID: UUID? = nil) {
+        _model = StateObject(wrappedValue: GuestPocketCardModel(wording: wording, goal: goal, tone: tone, made: made,
+                                                                messageID: messageID))
     }
 
     var body: some View {
@@ -245,7 +311,11 @@ struct GuestPocketCardSheet: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
-                share.padding(.horizontal, 24).padding(.vertical, 12).background(GuestBrand.ice)
+                VStack(spacing: 8) {
+                    share
+                    homeScreen
+                }
+                .padding(.horizontal, 24).padding(.vertical, 12).background(GuestBrand.ice)
             }
             .background(GuestBrand.ice.ignoresSafeArea())
             .navigationTitle("Pocket card").navigationBarTitleDisplayMode(.inline)
@@ -269,6 +339,23 @@ struct GuestPocketCardSheet: View {
         }
     }
 
+    /// The widget shows words on the Home Screen, so a card goes there only when asked.
+    @ViewBuilder private var homeScreen: some View {
+        if model.isOnHomeScreen {
+            Label("On your Home Screen", systemImage: "checkmark")
+                .font(GuestBrand.font(.subheadline, .semibold)).foregroundStyle(GuestBrand.blue)
+            Text("Hold the Home Screen, tap Edit, then add CircleU.")
+                .font(GuestBrand.font(.footnote)).foregroundStyle(GuestBrand.muted)
+        } else {
+            Button("Show on Home Screen", systemImage: "square.grid.2x2") { model.showOnHomeScreen() }
+                .buttonStyle(GuestBrandButtonStyle(filled: false))
+            if model.homeScreenFailed {
+                Text("Couldn’t add the card. Try again.")
+                    .font(GuestBrand.font(.footnote)).foregroundStyle(GuestBrand.danger)
+            }
+        }
+    }
+
     /// The system share sheet: Save Image, Messages, AirDrop. The image is drawn only when asked for.
     private var share: some View {
         ShareLink(item: GuestPocketCardExport(card: model.card),
@@ -276,5 +363,46 @@ struct GuestPocketCardSheet: View {
             Text("Share or save")
         }
         .buttonStyle(GuestBrandButtonStyle())
+    }
+}
+
+/// The card on the Home Screen, opened by tapping the widget: all of it, and the way to take it off.
+struct GuestPocketCardHomeSheet: View {
+    let card: GuestPocketCardSnapshot
+    var shelf: GuestPocketCardShelf = .standard
+    @Environment(\.dismiss) private var dismiss
+    @State private var takeOffFailed = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                GuestPocketCardView(card: GuestPocketCard(snapshot: card))
+                    .aspectRatio(GuestPocketCard.exportSize.width / GuestPocketCard.exportSize.height, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .padding(24)
+            }
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 8) {
+                    Button("Take off Home Screen") {
+                        takeOffFailed = !shelf.takeOff()
+                        if !takeOffFailed { dismiss() }
+                    }
+                    .buttonStyle(GuestBrandButtonStyle(filled: false))
+                    if takeOffFailed {
+                        Text("Couldn’t take the card off. Try again.")
+                            .font(GuestBrand.font(.footnote)).foregroundStyle(GuestBrand.danger)
+                    }
+                }
+                .padding(.horizontal, 24).padding(.vertical, 12).background(GuestBrand.ice)
+            }
+            .background(GuestBrand.ice.ignoresSafeArea())
+            .navigationTitle("Pocket card").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
+        }
+        .preferredColorScheme(.light)
     }
 }

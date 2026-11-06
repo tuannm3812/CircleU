@@ -123,6 +123,8 @@ struct GuestRootView: View {
     }
 
     @State private var phase: Phase = .opening
+    /// The Home Screen card, opened by tapping the widget.
+    @State private var homeCard: GuestPocketCardSnapshot?
     /// First launch shows Welcome; a new key, separate from the earlier app's onboarding flag.
     @AppStorage("circleu.guest.welcomeSeen.v1") private var welcomeSeen = false
     private let composition: GuestComposition
@@ -133,6 +135,17 @@ struct GuestRootView: View {
     }
 
     var body: some View {
+        // Here rather than on the home view, so a tap that cold-starts the app is not missed.
+        ZStack { content }
+            .onOpenURL { url in
+                if url == GuestPocketCardShelf.openURL { homeCard = GuestPocketCardShelf.standard.load() }
+            }
+            .sheet(isPresented: Binding(get: { homeCard != nil }, set: { if !$0 { homeCard = nil } })) {
+                if let homeCard { GuestPocketCardHomeSheet(card: homeCard) }
+            }
+    }
+
+    @ViewBuilder private var content: some View {
         switch phase {
         case .opening:
             ProgressView("Opening your journal…")

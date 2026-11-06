@@ -50,4 +50,45 @@ final class GuestPocketCardUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Saved · not sent")).firstMatch.waitForExistence(timeout: 5),
                       "back on the saved message, unchanged")
     }
+
+    /// The widget's tap opens the whole card, and that is where it comes off the Home Screen.
+    func testShowOnHomeScreenThenOpenAndTakeOff() throws {
+        continueAfterFailure = false
+        let app = launchGuest(fresh: true, ["-CircleUGuidedSuggestions", "YES"])
+        app.tabBars.buttons["Practice"].tap()
+        XCTAssertTrue(app.buttons["Practice a message"].waitForExistence(timeout: 10))
+        app.buttons["Practice a message"].tap()
+        app.buttons["Help me get started"].tap()
+        let intent = app.textFields["Your intent"]
+        XCTAssertTrue(intent.waitForExistence(timeout: 5))
+        intent.tap(); intent.typeText("A fair split")
+        app.buttons["Continue"].tap()
+        let wording = app.textViews["Your wording"]
+        XCTAssertTrue(wording.waitForExistence(timeout: 5))
+        wording.tap(); wording.typeText("Could we agree on the slides?")
+        app.buttons["Save without feedback"].tap()
+        let make = app.buttons["Make a pocket card"]
+        XCTAssertTrue(make.waitForExistence(timeout: 10))
+        for _ in 0..<4 where !make.isHittable { app.swipeUp() }
+        make.tap()
+
+        let show = app.buttons["Show on Home Screen"]
+        XCTAssertTrue(show.waitForExistence(timeout: 5))
+        show.tap()
+        XCTAssertTrue(app.staticTexts["On your Home Screen"].waitForExistence(timeout: 5))
+        shot(app, "pocket-3-on-home-screen")
+        app.buttons["Close"].tap()
+
+        // Opening a URL relaunches the app here, which also covers a tap that cold-starts it.
+        app.launchArguments.removeAll { $0 == "-CircleUResetGuestData" }
+        app.open(URL(string: "circleu-guest://pocket-card")!)
+        let takeOff = app.buttons["Take off Home Screen"]
+        XCTAssertTrue(takeOff.waitForExistence(timeout: 5), "the widget tap opens the card")
+        let card = app.otherElements.matching(NSPredicate(format: "label BEGINSWITH %@", "Pocket card.")).firstMatch
+        XCTAssertTrue(card.label.contains("Could we agree on the slides?"))
+        takeOff.tap()
+        XCTAssertTrue(takeOff.waitForNonExistence(timeout: 5))
+        app.open(URL(string: "circleu-guest://pocket-card")!)
+        XCTAssertFalse(takeOff.waitForExistence(timeout: 3), "nothing to open once it is off")
+    }
 }
