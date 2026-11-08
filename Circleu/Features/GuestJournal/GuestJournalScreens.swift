@@ -165,7 +165,7 @@ struct GuestWriteView: View {
                     }
                     .padding(.horizontal, 16).padding(.bottom, 12)
                 }
-                .background(.white, in: RoundedRectangle(cornerRadius: 22))
+                .background(.white, in: RoundedRectangle(cornerRadius: 20))
                 if let message = dictation.message {
                     VStack(alignment: .leading, spacing: 8) {
                         Label(message, systemImage: "info.circle")
@@ -441,16 +441,32 @@ struct GuestJournalRow: View {
             }
             .buttonStyle(.plain)
             if typeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 4) { contextButton; feelingButton }
+                VStack(alignment: .leading, spacing: 4) { tags.contextButton; tags.feelingButton }
             } else {
-                HStack(spacing: 8) { contextButton; Spacer(minLength: 0); feelingButton }
+                HStack(spacing: 8) { tags.contextButton; Spacer(minLength: 0); tags.feelingButton }
             }
         }
         .padding(16)
         .background(.white, in: RoundedRectangle(cornerRadius: 20))
     }
 
-    private var contextButton: some View {
+    private var tags: GuestEntryTags { GuestEntryTags(entry: entry, onTags: onTags) }
+
+    private var statuses: String {
+        var parts: [String] = []
+        if entry.reflection != nil { parts.append("Has a reflection") }
+        if entry.nextStep != nil { parts.append(entry.nextStepDone ? "Next step done" : "Next step not done") }
+        if hasPractice { parts.append("Has a practice message") }
+        return parts.joined(separator: ", ")
+    }
+}
+
+/// The context and feeling chips, on a journal row and on an open entry.
+struct GuestEntryTags {
+    let entry: GuestJournalEntry
+    let onTags: () -> Void
+
+    var contextButton: some View {
         Button(action: onTags) {
             HStack(spacing: 5) {
                 if let context = entry.context {
@@ -467,7 +483,7 @@ struct GuestJournalRow: View {
         .accessibilityLabel(entry.context.map { "Context: \($0.title)" } ?? "Add context")
     }
 
-    private var feelingButton: some View {
+    var feelingButton: some View {
         Button(action: onTags) {
             HStack(spacing: 5) {
                 if let feeling = entry.feeling {
@@ -480,14 +496,6 @@ struct GuestJournalRow: View {
         }
         .buttonStyle(.borderless)
         .accessibilityLabel(entry.feeling.map { "Feeling: \($0.title)" } ?? "Add feeling")
-    }
-
-    private var statuses: String {
-        var parts: [String] = []
-        if entry.reflection != nil { parts.append("Has a reflection") }
-        if entry.nextStep != nil { parts.append(entry.nextStepDone ? "Next step done" : "Next step not done") }
-        if hasPractice { parts.append("Has a practice message") }
-        return parts.joined(separator: ", ")
     }
 }
 
@@ -505,7 +513,7 @@ private struct GuestReflectionOfferCard: View {
             VStack(alignment: .leading, spacing: 10) { heading; HStack { actions } }
         }
         .padding(.vertical, 10).padding(.leading, 12).padding(.trailing, 6)
-        .background(.white, in: RoundedRectangle(cornerRadius: 18))
+        .background(.white, in: RoundedRectangle(cornerRadius: 20))
         .shadow(color: GuestBrand.ink.opacity(0.08), radius: 10, y: 2)
     }
 
@@ -555,6 +563,7 @@ struct GuestEntryDetailView: View {
     /// Owned here, outside the content that refreshes, so an open editor survives list reloads.
     @State private var editor: GuestEntryEditorViewModel?
     @State private var practiceRoute: GuestPracticeRoute?
+    @State private var tagging = false
     @State private var confirmDelete = false
     @State private var deleteError: String?
     @Environment(\.dismiss) private var dismiss
@@ -564,6 +573,13 @@ struct GuestEntryDetailView: View {
             .background(GuestBrand.ice.ignoresSafeArea())
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $tagging) {
+                if let entry = journal.entries.first(where: { $0.id == entryID }) {
+                    GuestEntryTagPicker(entry: entry, journal: journal)
+                } else {
+                    Color.clear.onAppear { tagging = false }
+                }
+            }
             .navigationDestination(item: $practiceRoute) { route in
                 GuestPracticeRouteView(route: route, practice: practice, journal: journal)
             }
@@ -629,10 +645,17 @@ struct GuestEntryDetailView: View {
                 Text(entry.createdAt, format: .dateTime.hour().minute())
                     .font(GuestBrand.font(.footnote)).foregroundStyle(GuestBrand.muted)
                     .accessibilityLabel(Text("Created \(entry.createdAt.formatted(date: .complete, time: .shortened))"))
-                Text(entry.originalWords).font(GuestBrand.font(.body)).foregroundStyle(GuestBrand.ink)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16).background(.white, in: RoundedRectangle(cornerRadius: 18))
-                    .accessibilityLabel(Text("My words: \(entry.originalWords)"))
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(entry.originalWords).font(GuestBrand.font(.body)).foregroundStyle(GuestBrand.ink)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityLabel(Text("My words: \(entry.originalWords)"))
+                    let tags = GuestEntryTags(entry: entry, onTags: { tagging = true })
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 8) { tags.contextButton; Spacer(minLength: 0); tags.feelingButton }
+                        VStack(alignment: .leading, spacing: 4) { tags.contextButton; tags.feelingButton }
+                    }
+                }
+                .padding(16).background(.white, in: RoundedRectangle(cornerRadius: 20))
                 GuestEntryReflectionSection(entry: entry, journal: journal)
                 let linked = practice.linkedMessages(to: entry.id)
                 if case .failed(let message) = practice.loadState {
@@ -693,7 +716,7 @@ struct GuestEntryEditView: View {
             TextEditor(text: $editor.text)
                 .scrollContentBackground(.hidden)
                 .padding(12)
-                .background(.white, in: RoundedRectangle(cornerRadius: 18))
+                .background(.white, in: RoundedRectangle(cornerRadius: 20))
                 .accessibilityLabel("Your words")
             if let error = editor.saveError {
                 Label(error, systemImage: "exclamationmark.circle")
@@ -714,9 +737,10 @@ struct GuestEntryEditView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Back") {
+                Button("Back", systemImage: "chevron.left") {
                     if editor.hasChanges { confirmDiscard = true } else { onDone() }
                 }
+                .tint(GuestBrand.ink) // Matches the system back arrow on other screens.
                 .disabled(!editor.canLeave) // Can't discard while a save may still commit.
             }
         }
@@ -793,7 +817,7 @@ struct GuestEntryReflectionSection: View {
                 .font(GuestBrand.font(.body)).foregroundStyle(GuestBrand.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 16).padding(.trailing, 4).padding(.vertical, 8)
-                .background(.white, in: RoundedRectangle(cornerRadius: 18))
+                .background(.white, in: RoundedRectangle(cornerRadius: 20))
             }
             if let step = entry.nextStep {
                 HStack(spacing: 4) {
@@ -812,7 +836,7 @@ struct GuestEntryReflectionSection: View {
                     }
                 }
                 .padding(.vertical, 4).padding(.leading, 4).padding(.trailing, 4)
-                .background(.white, in: RoundedRectangle(cornerRadius: 18))
+                .background(.white, in: RoundedRectangle(cornerRadius: 20))
             }
             if let error {
                 Label(error, systemImage: "exclamationmark.circle")

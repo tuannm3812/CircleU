@@ -85,9 +85,9 @@ struct GuestPracticeHomeView: View {
                 Spacer(minLength: 0)
             }
             .padding(12)
-            .background(.white, in: RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(GuestBrand.blue.opacity(0.4), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
-            .contentShape(RoundedRectangle(cornerRadius: 18))
+            .background(.white, in: RoundedRectangle(cornerRadius: 20))
+            .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(GuestBrand.blue.opacity(0.4), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
+            .contentShape(RoundedRectangle(cornerRadius: 20))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
@@ -348,7 +348,7 @@ struct GuestPracticeMessageView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Back") {
+                Button("Back", systemImage: "chevron.left") {
                     // A new message's words are kept as a draft; an edit to a saved one asks first.
                     if composer.isEditing && composer.stage == .reply {
                         focus = nil
@@ -364,6 +364,7 @@ struct GuestPracticeMessageView: View {
                         dismiss()
                     }
                 }
+                .tint(GuestBrand.ink) // Matches the system back arrow on other screens.
                 .disabled(!composer.canLeave)
             }
             if composer.isEditing && composer.stage == .refine {
@@ -478,9 +479,6 @@ struct GuestPracticeMessageView: View {
     /// "Find your words": one suggestion first, the rest on request, my words always kept.
     private var resultView: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if !typeSize.isAccessibilitySize {
-                GuestScene(.refineWorkbench).clipShape(RoundedRectangle(cornerRadius: 24))
-            }
             Text("Find your words").font(GuestBrand.font(.title2, .bold)).foregroundStyle(GuestBrand.ink)
                 .accessibilityAddTraits(.isHeader)
             if composer.isSuggesting {
@@ -558,8 +556,8 @@ struct GuestPracticeMessageView: View {
                             if composer.scene == scene { Image(systemName: "checkmark.circle.fill").accessibilityHidden(true) }
                         }
                         .frame(maxWidth: .infinity).padding(10)
-                        .background(.white, in: RoundedRectangle(cornerRadius: 18))
-                        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(
+                        .background(.white, in: RoundedRectangle(cornerRadius: 20))
+                        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(
                             composer.scene == scene ? GuestBrand.blue : .clear, lineWidth: 2))
                     }
                     .buttonStyle(.plain).accessibilityAddTraits(composer.scene == scene ? .isSelected : [])
@@ -602,12 +600,12 @@ struct GuestPracticeMessageView: View {
             }
             Text("Their reply").font(GuestBrand.font(.headline, .semibold))
             TextEditor(text: $composer.replyText).scrollContentBackground(.hidden)
-                .frame(minHeight: 120).padding(12).background(.white, in: RoundedRectangle(cornerRadius: 18))
+                .frame(minHeight: 120).padding(12).background(.white, in: RoundedRectangle(cornerRadius: 20))
                 .accessibilityLabel("Their reply")
             voiceButton(.reply)
             Text("More context").font(GuestBrand.font(.headline, .semibold))
             TextEditor(text: $composer.replyContext).scrollContentBackground(.hidden)
-                .frame(minHeight: 100).padding(12).background(.white, in: RoundedRectangle(cornerRadius: 18))
+                .frame(minHeight: 100).padding(12).background(.white, in: RoundedRectangle(cornerRadius: 20))
                 .accessibilityLabel("More context")
             voiceButton(.context)
         }
