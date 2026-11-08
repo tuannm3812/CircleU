@@ -24,7 +24,7 @@ struct GuestHomeView: View {
                 .tabItem { GuestTabLabel(title: "Practice", icon: "GuestIconPractice") }
                 .tag(Tab.practice)
             GuestPatternsView(journal: journal, practice: practice)
-                .tabItem { GuestTabLabel(title: "Patterns", icon: "GuestIconFeelings") }
+                .tabItem { GuestTabLabel(title: "Patterns", icon: "GuestIconPatterns") }
                 .tag(Tab.patterns)
         }
         .tint(GuestBrand.blue)

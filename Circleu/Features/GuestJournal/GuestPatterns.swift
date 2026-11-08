@@ -122,6 +122,7 @@ struct GuestPatternsView: View {
     @ObservedObject var journal: GuestJournalViewModel
     @ObservedObject var practice: GuestPracticeViewModel
     @State private var period = GuestPatterns.Period.fourWeeks
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         NavigationStack {
@@ -170,12 +171,25 @@ struct GuestPatternsView: View {
         if patterns.taggedCount == 0 {
             Text("No tags in these 4 weeks.").foregroundStyle(GuestBrand.muted).frame(maxWidth: .infinity)
         } else {
-            HStack(spacing: 10) {
-                stat(patterns.entryCount, "Entries")
-                stat(patterns.daysWritten, "Days written")
-                stat(patterns.taggedCount, "Tagged")
+            if typeSize.isAccessibilitySize {
+                // Three tiles can't hold their words at these sizes, so they become rows.
+                VStack(alignment: .leading, spacing: 8) {
+                    wideStat(patterns.entryCount, "Entries")
+                    wideStat(patterns.daysWritten, "Days written")
+                    wideStat(patterns.taggedCount, "Tagged")
+                }
+                .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                .background(.white, in: RoundedRectangle(cornerRadius: 20))
+            } else {
+                HStack(spacing: 10) {
+                    stat(patterns.entryCount, "Entries")
+                    stat(patterns.daysWritten, "Days written")
+                    stat(patterns.taggedCount, "Tagged")
+                }
             }
-            if !patterns.weeks.isEmpty { weekByWeek(patterns.weeks) }
+            if !patterns.weeks.isEmpty {
+                if typeSize.isAccessibilitySize { weekRows(patterns.weeks) } else { weekByWeek(patterns.weeks) }
+            }
             if let pair = patterns.topPair {
                 NavigationLink(value: GuestPatterns.Route(filter: .pair(pair.context, pair.feeling), period: period)) {
                 HStack(spacing: 12) {
@@ -209,11 +223,38 @@ struct GuestPatternsView: View {
     private func stat(_ value: Int, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text("\(value)").font(GuestBrand.font(size: 26, relativeTo: .title2, weight: .bold)).foregroundStyle(GuestBrand.ink)
-            Text(label).font(GuestBrand.font(.caption)).foregroundStyle(GuestBrand.muted).lineLimit(1).minimumScaleFactor(0.8)
+            Text(label).font(GuestBrand.font(.caption)).foregroundStyle(GuestBrand.muted).lineLimit(1)
         }
         .padding(.horizontal, 14).padding(.vertical, 12).frame(maxWidth: .infinity, alignment: .leading)
         .background(.white, in: RoundedRectangle(cornerRadius: 20))
         .accessibilityElement(children: .combine)
+    }
+
+    private func wideStat(_ value: Int, _ label: String) -> some View {
+        HStack {
+            Text(label).foregroundStyle(GuestBrand.muted)
+            Spacer(minLength: 8)
+            Text("\(value)").font(GuestBrand.font(.body, .bold))
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// At the largest text sizes four columns can't hold a date, so each week is a line.
+    private func weekRows(_ weeks: [(start: Date, count: Int)]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Week by week").font(GuestBrand.font(.headline, .semibold)).accessibilityAddTraits(.isHeader)
+            ForEach(Array(weeks.enumerated()), id: \.offset) { index, week in
+                HStack {
+                    Text(index == weeks.count - 1 ? "Last 7 days" : week.start.formatted(.dateTime.day().month(.abbreviated)))
+                        .foregroundStyle(GuestBrand.muted)
+                    Spacer(minLength: 8)
+                    Text("\(week.count)").font(GuestBrand.font(.body, .bold))
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white, in: RoundedRectangle(cornerRadius: 20))
     }
 
     /// One bar per week, one hue: how often I wrote, not how I felt.
@@ -230,7 +271,7 @@ struct GuestPatternsView: View {
                             .fill(week.count == 0 ? GuestBrand.wash : GuestBrand.blue)
                             .frame(height: max(4, 72 * CGFloat(week.count) / CGFloat(most)))
                         Text(index == weeks.count - 1 ? "Last 7 days" : week.start.formatted(.dateTime.day().month(.abbreviated)))
-                            .font(GuestBrand.font(.caption2)).foregroundStyle(GuestBrand.muted).lineLimit(1).minimumScaleFactor(0.8)
+                            .font(GuestBrand.font(.caption2)).foregroundStyle(GuestBrand.muted).lineLimit(1)
                     }
                     .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .ignore)
@@ -256,6 +297,7 @@ struct GuestPatternsView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             Text(row.title).font(GuestBrand.font(.subheadline, .semibold))
+                                .lineLimit(1).minimumScaleFactor(0.6) // "Overloaded" stays one word at large sizes.
                             Spacer(minLength: 8)
                             Text("\(row.count)").font(GuestBrand.font(.subheadline, .semibold)).foregroundStyle(GuestBrand.ink)
                             Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
