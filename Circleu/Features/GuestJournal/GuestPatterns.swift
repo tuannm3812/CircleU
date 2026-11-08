@@ -33,11 +33,50 @@ nonisolated struct GuestPatterns: Equatable, Sendable {
             && a.contexts.map(\.tag) == b.contexts.map(\.tag) && a.contexts.map(\.count) == b.contexts.map(\.count)
     }
 
+    /// What a tap on a count opens: the entries behind it.
+    enum Filter: Hashable, Sendable {
+        case feeling(GuestEntryFeeling), context(GuestEntryContext), pair(GuestEntryContext, GuestEntryFeeling)
+
+        var title: String {
+            switch self {
+            case .feeling(let feeling): feeling.title
+            case .context(let context): context.title
+            case .pair(let context, let feeling): "\(context.title) and \(feeling.title)"
+            }
+        }
+
+        func matches(_ entry: GuestJournalEntry) -> Bool {
+            switch self {
+            case .feeling(let feeling): entry.feeling == feeling
+            case .context(let context): entry.context == context
+            case .pair(let context, let feeling): entry.context == context && entry.feeling == feeling
+            }
+        }
+    }
+
+    struct Route: Hashable, Sendable {
+        let filter: Filter
+        let period: Period
+    }
+
+    /// Today and the 27 days before it: 28 calendar days.
+    static func inPeriod(_ all: [GuestJournalEntry], _ period: Period, now: Date = Date(),
+                         calendar: Calendar = .current) -> [GuestJournalEntry] {
+        guard period == .fourWeeks else { return all }
+        let start = calendar.date(byAdding: .day, value: -27, to: calendar.startOfDay(for: now)) ?? now
+        return all.filter { $0.createdAt >= start }
+    }
+
+    /// The entries behind one count, newest first, so the list always matches the number tapped.
+    static func entries(_ all: [GuestJournalEntry], for route: Route, now: Date = Date(),
+                        calendar: Calendar = .current) -> [GuestJournalEntry] {
+        inPeriod(all, route.period, now: now, calendar: calendar).filter(route.filter.matches)
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
     static func make(_ all: [GuestJournalEntry], period: Period, now: Date = Date(),
                      calendar: Calendar = .current) -> GuestPatterns {
-        // Today and the 27 days before it: 28 calendar days.
-        let start = calendar.date(byAdding: .day, value: -27, to: calendar.startOfDay(for: now)) ?? now
-        let entries = period == .allTime ? all : all.filter { $0.createdAt >= start }
+        let entries = inPeriod(all, period, now: now, calendar: calendar)
         func ranked<Tag: CaseIterable & Hashable>(_ tag: (GuestJournalEntry) -> Tag?) -> [(tag: Tag, count: Int)] {
             let counts = Dictionary(grouping: entries.compactMap(tag), by: { $0 }).mapValues(\.count)
             let order = Array(Tag.allCases)
@@ -97,7 +136,14 @@ struct GuestPatternsView: View {
             .navigationTitle("Patterns")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { GuestBrandToolbar(journal: journal, practice: practice) }
+            .navigationDestination(for: GuestPatterns.Route.self) { route in
+                GuestPatternEntriesView(route: route, journal: journal, practice: practice)
+            }
+            .navigationDestination(for: UUID.self) { id in
+                GuestEntryDetailView(entryID: id, journal: journal, practice: practice)
+            }
         }
+        .id(practice.dataGeneration) // Delete all closes anything open in Patterns, as in Journal.
     }
 
     @ViewBuilder private func content(_ patterns: GuestPatterns) -> some View {
@@ -105,6 +151,7 @@ struct GuestPatternsView: View {
             Text("No tags in these 4 weeks.").foregroundStyle(GuestBrand.muted).frame(maxWidth: .infinity)
         } else {
             if let pair = patterns.topPair {
+                NavigationLink(value: GuestPatterns.Route(filter: .pair(pair.context, pair.feeling), period: period)) {
                 HStack(spacing: 12) {
                     Image(pair.feeling.asset).resizable().scaledToFit().frame(width: 52, height: 52)
                         .accessibilityHidden(true)
@@ -116,23 +163,28 @@ struct GuestPatternsView: View {
                 .padding(16).frame(maxWidth: .infinity, alignment: .leading)
                 .background(GuestBrand.blue, in: RoundedRectangle(cornerRadius: 20))
                 .accessibilityElement(children: .combine)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Shows those entries")
             }
             if !patterns.feelings.isEmpty {
-                card("Feelings", rows: patterns.feelings.map { ($0.tag.title, $0.tag.asset, $0.count) })
+                card("Feelings", rows: patterns.feelings.map { ($0.tag.title, $0.tag.asset, $0.count, .feeling($0.tag)) })
             }
             if !patterns.contexts.isEmpty {
-                card("Contexts", rows: patterns.contexts.map { ($0.tag.title, $0.tag.asset, $0.count) })
+                card("Contexts", rows: patterns.contexts.map { ($0.tag.title, $0.tag.asset, $0.count, .context($0.tag)) })
             }
             Text("From \(patterns.taggedCount) tagged of \(patterns.entryCount) entries. Only your own tags.")
                 .font(GuestBrand.font(.footnote)).foregroundStyle(GuestBrand.muted)
         }
     }
 
-    private func card(_ title: String, rows: [(title: String, asset: String, count: Int)]) -> some View {
+    private func card(_ title: String,
+                      rows: [(title: String, asset: String, count: Int, filter: GuestPatterns.Filter)]) -> some View {
         let most = max(rows.map(\.count).max() ?? 1, 1)
         return VStack(alignment: .leading, spacing: 12) {
             Text(title).font(GuestBrand.font(.headline, .semibold)).accessibilityAddTraits(.isHeader)
             ForEach(rows, id: \.title) { row in
+                NavigationLink(value: GuestPatterns.Route(filter: row.filter, period: period)) {
                 HStack(spacing: 10) {
                     Image(row.asset).resizable().scaledToFit().frame(width: 30, height: 30).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 4) {
@@ -150,11 +202,64 @@ struct GuestPatternsView: View {
                             }
                     }
                 }
+                .contentShape(Rectangle())
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("\(row.title), \(row.count)")
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Shows those entries")
             }
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
         .background(.white, in: RoundedRectangle(cornerRadius: 20))
+    }
+}
+
+/// The entries behind one count in Patterns, read and tagged like Journal.
+struct GuestPatternEntriesView: View {
+    let route: GuestPatterns.Route
+    @ObservedObject var journal: GuestJournalViewModel
+    @ObservedObject var practice: GuestPracticeViewModel
+    @State private var taggingEntry: GuestJournalEntry?
+
+    var body: some View {
+        ScrollView {
+            switch journal.loadState {
+            case .loading:
+                ProgressView().frame(maxWidth: .infinity).padding(24)
+            case .failed(let message):
+                VStack(spacing: 12) {
+                    Text(message).multilineTextAlignment(.center)
+                    Button("Try again") { Task { await journal.load() } }
+                }
+                .frame(maxWidth: .infinity).padding(24)
+            case .loaded(let all):
+                list(GuestPatterns.entries(all, for: route))
+            }
+        }
+        .background(GuestBrand.ice.ignoresSafeArea())
+        .navigationTitle(route.filter.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $taggingEntry) { entry in GuestEntryTagPicker(entry: entry, journal: journal) }
+    }
+
+    private func list(_ entries: [GuestJournalEntry]) -> some View {
+            LazyVStack(alignment: .leading, spacing: 8) {
+                if entries.isEmpty {
+                    // Retagging an entry here can leave nothing behind this count.
+                    Text("No entries left here.").foregroundStyle(GuestBrand.muted).frame(maxWidth: .infinity)
+                }
+                // Dated like Journal, since a row shows only the time.
+                ForEach(GuestJournalDayGroup.make(entries)) { group in
+                    Text(group.id, format: .dateTime.day().month(.abbreviated).year())
+                        .font(GuestBrand.font(.footnote, .semibold)).foregroundStyle(GuestBrand.muted)
+                        .accessibilityAddTraits(.isHeader).padding(.top, 8)
+                    ForEach(group.entries) { entry in
+                        GuestJournalRow(entry: entry, hasPractice: !practice.linkedMessages(to: entry.id).isEmpty,
+                                        onTags: { taggingEntry = entry })
+                    }
+                }
+            }
+            .padding(24)
     }
 }
