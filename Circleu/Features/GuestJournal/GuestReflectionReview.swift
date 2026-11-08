@@ -137,7 +137,8 @@ struct GuestReflectionReviewView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Back") { if review.hasEdits { confirmDiscard = true } else { dismiss() } }
+                Button("Back", systemImage: "chevron.left") { if review.hasEdits { confirmDiscard = true } else { dismiss() } }
+                .tint(GuestBrand.ink) // Matches the system back arrow on other screens.
                     .disabled(review.isSaving)
             }
         }

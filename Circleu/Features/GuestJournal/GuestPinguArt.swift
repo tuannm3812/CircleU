@@ -220,6 +220,13 @@ struct GuestBrandToolbar: ToolbarContent {
         } else {
             ToolbarItem(placement: .topBarLeading) { mark }
         }
+        // The tab bar already names the tab; this replaces the centre title, which stays for VoiceOver.
+        if #available(iOS 26.0, *) {
+            ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1).accessibilityHidden(true) }
+                .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1).accessibilityHidden(true) }
+        }
         ToolbarItem(placement: .topBarTrailing) {
             NavigationLink {
                 GuestSettingsView(journal: journal, practice: practice)
