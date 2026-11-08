@@ -43,4 +43,18 @@ final class GuestPatternsTests: XCTestCase {
         XCTAssertFalse(GuestPatterns.make([entry(.work), entry(nil, .calm), entry()], period: .allTime, now: now).hasEnough)
         XCTAssertTrue(GuestPatterns.make([entry(.work), entry(nil, .calm), entry(.study)], period: .allTime, now: now).hasEnough)
     }
+
+    func testATapShowsExactlyTheEntriesBehindTheCount() {
+        let recent = entry(daysAgo: 1, .study, .worried)
+        let older = entry(daysAgo: 3, .study, .worried)
+        let outside = entry(daysAgo: 40, .study, .worried)
+        let other = entry(daysAgo: 2, .work, .worried)
+        let all = [older, outside, recent, other]
+        let pair = GuestPatterns.Route(filter: .pair(.study, .worried), period: .fourWeeks)
+        XCTAssertEqual(GuestPatterns.entries(all, for: pair, now: now).map(\.id), [recent.id, older.id], "newest first, period kept")
+        let feeling = GuestPatterns.Route(filter: .feeling(.worried), period: .fourWeeks)
+        XCTAssertEqual(GuestPatterns.entries(all, for: feeling, now: now).count,
+                       GuestPatterns.make(all, period: .fourWeeks, now: now).feelings.first?.count, "the list matches the number tapped")
+        XCTAssertEqual(GuestPatterns.entries(all, for: GuestPatterns.Route(filter: .context(.study), period: .allTime), now: now).count, 3)
+    }
 }

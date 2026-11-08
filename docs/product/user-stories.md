@@ -350,6 +350,7 @@ Screen: Practice → saved message → "Make a pocket card". States: Soft, Balan
 | P13.2 | Given enough tags, then feelings and contexts show as counts, most often first. Untagged entries are never counted or guessed. | Unit `testCountsMyTagsMostOftenFirst`, `testUntaggedEntriesStayOutOfTheCounts`; UI `testCountsAndPeriods` |
 | P13.3 | Given a context and feeling chosen together more than once, then the most frequent pair shows as a plain count. | Unit `testTogetherNeedsMoreThanOneEntry` |
 | P13.4 | Given the period switch, then 4 weeks leaves out older entries and All time includes them. | Unit `testFourWeeksLeavesOutOlderEntries`; UI `testCountsAndPeriods` |
+| P13.5 | Given a count or the highlight, when I tap it, then the entries behind it for the same period open newest first and dated, and I can open or retag them. | Unit `testATapShowsExactlyTheEntriesBehindTheCount`; UI `testTappingACountShowsThoseEntries` |
 
 ## 5. Settings
 

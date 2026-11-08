@@ -408,7 +408,7 @@ struct GuestJournalListView: View {
 }
 
 /// The read action and the two tag actions are siblings, so tags never open the entry by accident.
-private struct GuestJournalRow: View {
+struct GuestJournalRow: View {
     let entry: GuestJournalEntry
     let hasPractice: Bool
     let onTags: () -> Void
