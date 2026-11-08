@@ -57,4 +57,22 @@ final class GuestPatternsTests: XCTestCase {
                        GuestPatterns.make(all, period: .fourWeeks, now: now).feelings.first?.count, "the list matches the number tapped")
         XCTAssertEqual(GuestPatterns.entries(all, for: GuestPatterns.Route(filter: .context(.study), period: .allTime), now: now).count, 3)
     }
+
+    func testWeekByWeekAndDaysWritten() {
+        let all = [entry(daysAgo: 0, .work), entry(daysAgo: 0, .work), entry(daysAgo: 6, .work), entry(daysAgo: 7, .work),
+                   entry(daysAgo: 27, .work), entry(daysAgo: 30, .work)]
+        let patterns = GuestPatterns.make(all, period: .fourWeeks, now: now)
+        XCTAssertEqual(patterns.weeks.map(\.count), [1, 0, 1, 3], "oldest first; this week is today and the six days before")
+        XCTAssertEqual(patterns.weeks.map(\.count).reduce(0, +), patterns.entryCount, "every entry in the period lands in one week")
+        XCTAssertEqual(patterns.daysWritten, 4)
+        XCTAssertTrue(GuestPatterns.make(all, period: .allTime, now: now).weeks.isEmpty, "weeks are for the 4-week view")
+    }
+
+    func testAFutureDatedEntryIsLeftOutOfFourWeeksEverywhere() {
+        let all = [entry(daysAgo: 1, .work, .calm), entry(daysAgo: -2, .work, .calm)]
+        let patterns = GuestPatterns.make(all, period: .fourWeeks, now: now)
+        XCTAssertEqual(patterns.entryCount, 1)
+        XCTAssertEqual(patterns.weeks.map(\.count).reduce(0, +), 1, "the bars and the totals agree")
+        XCTAssertEqual(GuestPatterns.entries(all, for: GuestPatterns.Route(filter: .context(.work), period: .fourWeeks), now: now).count, 1)
+    }
 }

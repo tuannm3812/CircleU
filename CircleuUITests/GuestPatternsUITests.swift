@@ -22,6 +22,7 @@ final class GuestPatternsUITests: XCTestCase {
         let app = launchGuest(fresh: true, ["-CircleUSeedShowcase", "YES", "-CircleUSeedPatterns", "YES"])
         app.tabBars.buttons["Patterns"].tap()
         XCTAssertTrue(has(app, "Study and Worried came up together", 10))
+        XCTAssertTrue(has(app, "Week by week"))
         shot(app, "patterns-top")
         app.swipeUp()
         XCTAssertTrue(has(app, "Contexts"))
