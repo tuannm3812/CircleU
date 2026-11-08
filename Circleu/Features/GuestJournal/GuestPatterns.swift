@@ -24,6 +24,10 @@ nonisolated struct GuestPatterns: Equatable, Sendable {
     var contexts: [(tag: GuestEntryContext, count: Int)] = []
     /// The context and feeling chosen together most often, when that happened more than once.
     var topPair: Pair?
+    /// Calendar days with at least one entry.
+    var daysWritten = 0
+    /// 4 weeks only: entries in each 7-day stretch, oldest first, the last ending today.
+    var weeks: [(start: Date, count: Int)] = []
 
     var hasEnough: Bool { taggedCount >= Self.enoughTagged }
 
@@ -31,6 +35,8 @@ nonisolated struct GuestPatterns: Equatable, Sendable {
         a.entryCount == b.entryCount && a.taggedCount == b.taggedCount && a.topPair == b.topPair
             && a.feelings.map(\.tag) == b.feelings.map(\.tag) && a.feelings.map(\.count) == b.feelings.map(\.count)
             && a.contexts.map(\.tag) == b.contexts.map(\.tag) && a.contexts.map(\.count) == b.contexts.map(\.count)
+            && a.daysWritten == b.daysWritten && a.weeks.map(\.start) == b.weeks.map(\.start)
+            && a.weeks.map(\.count) == b.weeks.map(\.count)
     }
 
     /// What a tap on a count opens: the entries behind it.
@@ -63,8 +69,11 @@ nonisolated struct GuestPatterns: Equatable, Sendable {
     static func inPeriod(_ all: [GuestJournalEntry], _ period: Period, now: Date = Date(),
                          calendar: Calendar = .current) -> [GuestJournalEntry] {
         guard period == .fourWeeks else { return all }
-        let start = calendar.date(byAdding: .day, value: -27, to: calendar.startOfDay(for: now)) ?? now
-        return all.filter { $0.createdAt >= start }
+        let today = calendar.startOfDay(for: now)
+        let start = calendar.date(byAdding: .day, value: -27, to: today) ?? now
+        // Ends at tomorrow's midnight, like the weekly bars, so a future-dated entry is in neither.
+        let end = calendar.date(byAdding: .day, value: 1, to: today) ?? now
+        return all.filter { $0.createdAt >= start && $0.createdAt < end }
     }
 
     /// The entries behind one count, newest first, so the list always matches the number tapped.
@@ -92,9 +101,20 @@ nonisolated struct GuestPatterns: Equatable, Sendable {
         }
         var best: Pair?
         for pair in pairs where pair.count > (best?.count ?? 0) { best = pair }
+        let today = calendar.startOfDay(for: now)
+        var weeks: [(start: Date, count: Int)] = []
+        if period == .fourWeeks {
+            for index in (0..<4).reversed() {
+                guard let start = calendar.date(byAdding: .day, value: -7 * index - 6, to: today),
+                      let end = calendar.date(byAdding: .day, value: -7 * index + 1, to: today) else { continue }
+                weeks.append((start, entries.filter { $0.createdAt >= start && $0.createdAt < end }.count))
+            }
+        }
         return GuestPatterns(entryCount: entries.count,
                              taggedCount: entries.filter { $0.context != nil || $0.feeling != nil }.count,
-                             feelings: ranked(\.feeling), contexts: ranked(\.context), topPair: best)
+                             feelings: ranked(\.feeling), contexts: ranked(\.context), topPair: best,
+                             daysWritten: Set(entries.map { calendar.startOfDay(for: $0.createdAt) }).count,
+                             weeks: weeks)
     }
 }
 
@@ -150,6 +170,12 @@ struct GuestPatternsView: View {
         if patterns.taggedCount == 0 {
             Text("No tags in these 4 weeks.").foregroundStyle(GuestBrand.muted).frame(maxWidth: .infinity)
         } else {
+            HStack(spacing: 10) {
+                stat(patterns.entryCount, "Entries")
+                stat(patterns.daysWritten, "Days written")
+                stat(patterns.taggedCount, "Tagged")
+            }
+            if !patterns.weeks.isEmpty { weekByWeek(patterns.weeks) }
             if let pair = patterns.topPair {
                 NavigationLink(value: GuestPatterns.Route(filter: .pair(pair.context, pair.feeling), period: period)) {
                 HStack(spacing: 12) {
@@ -159,6 +185,8 @@ struct GuestPatternsView: View {
                         .font(GuestBrand.font(.headline, .semibold)).foregroundStyle(.white)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.8)).accessibilityHidden(true)
                 }
                 .padding(16).frame(maxWidth: .infinity, alignment: .leading)
                 .background(GuestBrand.blue, in: RoundedRectangle(cornerRadius: 20))
@@ -173,9 +201,47 @@ struct GuestPatternsView: View {
             if !patterns.contexts.isEmpty {
                 card("Contexts", rows: patterns.contexts.map { ($0.tag.title, $0.tag.asset, $0.count, .context($0.tag)) })
             }
-            Text("From \(patterns.taggedCount) tagged of \(patterns.entryCount) entries. Only your own tags.")
+            Text("Only your own tags. Tap a row to see its entries.")
                 .font(GuestBrand.font(.footnote)).foregroundStyle(GuestBrand.muted)
         }
+    }
+
+    private func stat(_ value: Int, _ label: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("\(value)").font(GuestBrand.font(size: 26, relativeTo: .title2, weight: .bold)).foregroundStyle(GuestBrand.ink)
+            Text(label).font(GuestBrand.font(.caption)).foregroundStyle(GuestBrand.muted).lineLimit(1).minimumScaleFactor(0.8)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12).frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white, in: RoundedRectangle(cornerRadius: 20))
+        .accessibilityElement(children: .combine)
+    }
+
+    /// One bar per week, one hue: how often I wrote, not how I felt.
+    private func weekByWeek(_ weeks: [(start: Date, count: Int)]) -> some View {
+        let most = max(weeks.map(\.count).max() ?? 1, 1)
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Week by week").font(GuestBrand.font(.headline, .semibold)).accessibilityAddTraits(.isHeader)
+            HStack(alignment: .bottom, spacing: 12) {
+                ForEach(Array(weeks.enumerated()), id: \.offset) { index, week in
+                    VStack(spacing: 6) {
+                        Text("\(week.count)").font(GuestBrand.font(.caption, .semibold))
+                            .foregroundStyle(week.count == 0 ? GuestBrand.muted : GuestBrand.ink)
+                        UnevenRoundedRectangle(topLeadingRadius: 6, topTrailingRadius: 6)
+                            .fill(week.count == 0 ? GuestBrand.wash : GuestBrand.blue)
+                            .frame(height: max(4, 72 * CGFloat(week.count) / CGFloat(most)))
+                        Text(index == weeks.count - 1 ? "Last 7 days" : week.start.formatted(.dateTime.day().month(.abbreviated)))
+                            .font(GuestBrand.font(.caption2)).foregroundStyle(GuestBrand.muted).lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(index == weeks.count - 1 ? "Last 7 days, \(week.count) entries"
+                                        : "Week of \(week.start.formatted(.dateTime.day().month(.wide))), \(week.count) entries")
+                }
+            }
+            .frame(height: 118, alignment: .bottom)
+        }
+        .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white, in: RoundedRectangle(cornerRadius: 20))
     }
 
     private func card(_ title: String,
@@ -191,7 +257,9 @@ struct GuestPatternsView: View {
                         HStack {
                             Text(row.title).font(GuestBrand.font(.subheadline, .semibold))
                             Spacer(minLength: 8)
-                            Text("\(row.count)").font(GuestBrand.font(.subheadline, .semibold)).foregroundStyle(GuestBrand.blue)
+                            Text("\(row.count)").font(GuestBrand.font(.subheadline, .semibold)).foregroundStyle(GuestBrand.ink)
+                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(GuestBrand.muted).accessibilityHidden(true)
                         }
                         Capsule().fill(GuestBrand.wash).frame(height: 8)
                             .overlay(alignment: .leading) {
@@ -245,6 +313,10 @@ struct GuestPatternEntriesView: View {
 
     private func list(_ entries: [GuestJournalEntry]) -> some View {
             LazyVStack(alignment: .leading, spacing: 8) {
+                if !entries.isEmpty {
+                    Text("\(entries.count) \(entries.count == 1 ? "entry" : "entries") · \(route.period == .fourWeeks ? "last 4 weeks" : "all time")")
+                        .font(GuestBrand.font(.subheadline, .semibold)).foregroundStyle(GuestBrand.muted)
+                }
                 if entries.isEmpty {
                     // Retagging an entry here can leave nothing behind this count.
                     Text("No entries left here.").foregroundStyle(GuestBrand.muted).frame(maxWidth: .infinity)

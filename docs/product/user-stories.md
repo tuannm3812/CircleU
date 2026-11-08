@@ -351,6 +351,7 @@ Screen: Practice → saved message → "Make a pocket card". States: Soft, Balan
 | P13.3 | Given a context and feeling chosen together more than once, then the most frequent pair shows as a plain count. | Unit `testTogetherNeedsMoreThanOneEntry` |
 | P13.4 | Given the period switch, then 4 weeks leaves out older entries and All time includes them. | Unit `testFourWeeksLeavesOutOlderEntries`; UI `testCountsAndPeriods` |
 | P13.5 | Given a count or the highlight, when I tap it, then the entries behind it for the same period open newest first and dated, and I can open or retag them. | Unit `testATapShowsExactlyTheEntriesBehindTheCount`; UI `testTappingACountShowsThoseEntries` |
+| P13.6 | Given 4 weeks, then tiles show entries, days written and tagged, and one bar per 7-day stretch shows how often I wrote. The bars always add up to the total, and a future-dated entry is in neither. | Unit `testWeekByWeekAndDaysWritten`, `testAFutureDatedEntryIsLeftOutOfFourWeeksEverywhere`; UI `testCountsAndPeriods` |
 
 ## 5. Settings
 
